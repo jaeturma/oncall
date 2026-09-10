@@ -1,0 +1,1 @@
+<x-layouts.admin title="Service catalog"><h1 class="text-3xl font-black">Services</h1><div class="mt-6 grid gap-4">@foreach($categories as $category)<article class="rounded-xl bg-white p-5 shadow"><h2 class="font-bold">{{ $category->name }}</h2><p class="text-slate-600">{{ $category->services->pluck('name')->join(', ') }}</p></article>@endforeach</div></x-layouts.admin>

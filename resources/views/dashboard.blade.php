@@ -1,0 +1,1 @@
+<x-layouts.app title="Dashboard"><h1 class="text-3xl font-black">Welcome, {{ auth()->user()->name }}</h1><p class="mt-2 text-slate-600">Stay on Oncall. Stay protected.</p><form method="POST" action="{{ route('logout') }}" class="mt-6">@csrf<button class="rounded-lg border px-4 py-2">Sign out</button></form></x-layouts.app>

@@ -1,0 +1,35 @@
+@import 'tailwindcss';
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+
+@theme {
+    --font-sans: 'Poppins', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+        'Segoe UI Symbol', 'Noto Color Emoji';
+
+    /* Oncall Philippines brand palette — deep navy + gold/yellow (from theme-source) */
+    --color-navy-50: #eef4f7;
+    --color-navy-100: #d5e2e9;
+    --color-navy-200: #aec7d3;
+    --color-navy-300: #7ca1b4;
+    --color-navy-400: #4a7488;
+    --color-navy-500: #2d566b;
+    --color-navy-600: #1f4255;
+    --color-navy-700: #163545;
+    --color-navy-800: #0c2b3b;
+    --color-navy-900: #01273a;
+    --color-navy-950: #001824;
+
+    --color-gold-50: #fffaea;
+    --color-gold-100: #fff1c2;
+    --color-gold-200: #ffe285;
+    --color-gold-300: #ffd44d;
+    --color-gold-400: #ffce10;
+    --color-gold-500: #f5b400;
+    --color-gold-600: #d38f00;
+    --color-gold-700: #a86a02;
+    --color-gold-800: #8a5308;
+    --color-gold-900: #74440d;
+
+    --color-oncall: #ffce10;
+}
