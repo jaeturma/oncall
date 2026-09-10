@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\DB;
 
 class JobService
 {
+    public function __construct(private readonly JobPaymentService $jobPayments) {}
+
     public function transition(Job $job, User $actor, JobStatus $targetStatus, ?string $notes): Job
     {
         return DB::transaction(function () use ($job, $actor, $targetStatus, $notes): Job {
@@ -28,6 +30,7 @@ class JobService
 
             if ($targetStatus === JobStatus::Completed) {
                 $lockedJob->provider()->firstOrFail()->providerProfile()->increment('completed_jobs_cached');
+                $this->jobPayments->openFor($lockedJob);
             }
 
             return $lockedJob;

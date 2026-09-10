@@ -26,7 +26,7 @@ class JobController extends Controller
     public function show(Job $job): View
     {
         Gate::authorize('view', $job);
-        $job->load(['serviceRequest.service', 'serviceRequest.province', 'serviceRequest.municipality', 'serviceFinder', 'provider', 'statusLogs' => fn ($query) => $query->with('changedBy:id,name')->latest('id'), 'messages' => fn ($query) => $query->with('sender:id,name')->oldest('id'), 'reviews' => fn ($query) => $query->with(['reviewer:id,name', 'reviewee:id,name'])->oldest('id')]);
+        $job->load(['serviceRequest.service', 'serviceRequest.province', 'serviceRequest.municipality', 'serviceFinder', 'provider', 'jobPayment', 'statusLogs' => fn ($query) => $query->with('changedBy:id,name')->latest('id'), 'messages' => fn ($query) => $query->with('sender:id,name')->oldest('id'), 'reviews' => fn ($query) => $query->with(['reviewer:id,name', 'reviewee:id,name'])->oldest('id')]);
 
         return view('jobs.show', ['job' => $job]);
     }

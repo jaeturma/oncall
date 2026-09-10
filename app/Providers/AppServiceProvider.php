@@ -7,6 +7,7 @@ use App\Models\Commission;
 use App\Models\EnforcementCase;
 use App\Models\Job;
 use App\Models\JobMessage;
+use App\Models\JobPayment;
 use App\Models\Review;
 use App\Models\ServiceRequest;
 use App\Models\UserReport;
@@ -15,6 +16,7 @@ use App\Policies\AccountTypePolicy;
 use App\Policies\CommissionPolicy;
 use App\Policies\EnforcementCasePolicy;
 use App\Policies\JobMessagePolicy;
+use App\Policies\JobPaymentPolicy;
 use App\Policies\JobPolicy;
 use App\Policies\ReviewPolicy;
 use App\Policies\ServiceRequestPolicy;
@@ -49,5 +51,6 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(AccountType::class, AccountTypePolicy::class);
         Gate::policy(Commission::class, CommissionPolicy::class);
         Gate::policy(Withdrawal::class, WithdrawalPolicy::class);
+        Gate::policy(JobPayment::class, JobPaymentPolicy::class);
     }
 }

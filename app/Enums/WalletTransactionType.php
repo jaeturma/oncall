@@ -5,6 +5,7 @@ namespace App\Enums;
 enum WalletTransactionType: string
 {
     case Commission = 'COMMISSION';
+    case JobEarning = 'JOB_EARNING';
     case WithdrawalHold = 'WITHDRAWAL_HOLD';
     case Withdrawal = 'WITHDRAWAL';
     case WithdrawalRelease = 'WITHDRAWAL_RELEASE';

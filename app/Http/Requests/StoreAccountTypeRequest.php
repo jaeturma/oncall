@@ -40,6 +40,7 @@ class StoreAccountTypeRequest extends FormRequest
             'registration_fee' => ['required', 'numeric', 'min:0', 'max:1000000'],
             'sponsor_commission_type' => ['required', new Enum(CommissionType::class)],
             'sponsor_commission_value' => ['required', 'numeric', 'min:0', 'max:1000000'],
+            'platform_commission_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'requires_identity_verification' => ['boolean'],
             'active' => ['boolean'],
         ];
@@ -66,6 +67,7 @@ class StoreAccountTypeRequest extends FormRequest
             'registration_fee' => $this->input('registration_fee'),
             'sponsor_commission_type' => $this->input('sponsor_commission_type'),
             'sponsor_commission_value' => $this->input('sponsor_commission_value'),
+            'platform_commission_percent' => $this->filled('platform_commission_percent') ? $this->input('platform_commission_percent') : null,
             'requires_identity_verification' => $this->boolean('requires_identity_verification'),
             'active' => $this->boolean('active'),
         ];

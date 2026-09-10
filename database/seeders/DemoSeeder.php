@@ -5,15 +5,22 @@ namespace Database\Seeders;
 use App\Enums\CommissionStatus;
 use App\Enums\CommissionType;
 use App\Enums\DocumentType;
+use App\Enums\JobStatus;
+use App\Enums\ServiceRequestStatus;
+use App\Enums\ServiceUrgency;
 use App\Enums\UserRole;
 use App\Enums\UserStatus;
 use App\Enums\VerificationStatus;
 use App\Models\AccountType;
+use App\Models\Job;
 use App\Models\Municipality;
 use App\Models\ProviderProfile;
 use App\Models\Service;
+use App\Models\ServiceRequest;
 use App\Models\User;
 use App\Services\CommissionEngine;
+use App\Services\JobPaymentService;
+use App\Services\JobService;
 use App\Services\WalletLedger;
 use App\Services\WithdrawalWorkflow;
 use Illuminate\Database\Seeder;
@@ -63,7 +70,80 @@ class DemoSeeder extends Seeder
             ],
         );
 
+        $this->demoJobAndEarning();
         $this->demoFinance();
+    }
+
+    /**
+     * A completed, paid, released job so a provider has a real wallet balance.
+     */
+    private function demoJobAndEarning(): void
+    {
+        $finder = User::query()->where('email', 'customer@oncall.ph')->first();
+        $lito = User::query()->where('email', 'lito@oncall.ph')->first();
+        $accounting = User::query()->where('email', 'accounting@oncall.ph')->first();
+        if ($finder === null || $lito === null || $accounting === null || Job::query()->where('provider_id', $lito->id)->exists()) {
+            return;
+        }
+
+        $profile = $lito->providerProfile;
+        $service = Service::query()->where('name', 'Plumber')->sole();
+
+        $request = ServiceRequest::create([
+            'service_finder_id' => $finder->id,
+            'requested_provider_id' => $lito->id,
+            'service_id' => $service->id,
+            'province_id' => $profile->province_id,
+            'municipality_id' => $profile->municipality_id,
+            'title' => 'Leaking kitchen pipe',
+            'description' => 'Under-sink pipe dripping; needs replacement.',
+            'urgency' => ServiceUrgency::SameDay,
+            'status' => ServiceRequestStatus::Accepted,
+            'safety_acknowledged_at' => now(),
+        ]);
+
+        $job = Job::create([
+            'service_request_id' => $request->id,
+            'service_finder_id' => $finder->id,
+            'provider_id' => $lito->id,
+            'agreed_price' => '1200.00',
+            'status' => JobStatus::InProgress,
+            'accepted_at' => now()->subDays(2),
+            'started_at' => now()->subDay(),
+        ]);
+
+        app(JobService::class)->transition($job, $lito, JobStatus::Completed, 'Pipe replaced and tested.');
+        $payment = $job->jobPayment;
+        app(JobPaymentService::class)->confirmPaid($payment, $finder, 'GCash', 'GCash ref 9931-0022');
+        app(JobPaymentService::class)->release($payment->fresh(), $accounting);
+
+        // A second job whose payment is confirmed but not yet released, so the
+        // staff Job payments queue has something to act on.
+        $grace = User::query()->where('email', 'grace@oncall.ph')->first();
+        $graceProfile = $grace->providerProfile;
+        $babysitting = Service::query()->where('name', 'Babysitter')->sole();
+        $request2 = ServiceRequest::create([
+            'service_finder_id' => $finder->id,
+            'requested_provider_id' => $grace->id,
+            'service_id' => $babysitting->id,
+            'province_id' => $graceProfile->province_id,
+            'municipality_id' => $graceProfile->municipality_id,
+            'title' => 'Evening childminding',
+            'urgency' => ServiceUrgency::Scheduled,
+            'status' => ServiceRequestStatus::Accepted,
+            'safety_acknowledged_at' => now(),
+        ]);
+        $job2 = Job::create([
+            'service_request_id' => $request2->id,
+            'service_finder_id' => $finder->id,
+            'provider_id' => $grace->id,
+            'agreed_price' => '800.00',
+            'status' => JobStatus::InProgress,
+            'accepted_at' => now()->subDay(),
+            'started_at' => now()->subHours(5),
+        ]);
+        app(JobService::class)->transition($job2, $grace, JobStatus::Completed, 'Watched the kids 6-10pm.');
+        app(JobPaymentService::class)->confirmPaid($job2->jobPayment, $finder, 'Cash', 'Paid in cash on pickup');
     }
 
     private function accountTypes(): void

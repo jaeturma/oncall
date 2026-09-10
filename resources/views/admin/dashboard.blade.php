@@ -10,6 +10,7 @@
             <a class="rounded-xl bg-slate-50 p-4 hover:bg-gold-50" href="{{ route('admin.account-types.index') }}"><p class="font-bold">Account types</p><p class="mt-1 text-sm text-slate-600">Registration fees &amp; sponsor commission rules.</p></a>
             <a class="rounded-xl bg-slate-50 p-4 hover:bg-gold-50" href="{{ route('admin.commissions.index') }}"><p class="font-bold">Sponsor commissions</p><p class="mt-1 text-sm text-slate-600">Approve or reverse posted commissions.</p></a>
             <a class="rounded-xl bg-slate-50 p-4 hover:bg-gold-50" href="{{ route('staff.withdrawals.index') }}"><p class="font-bold">Withdrawal queue</p><p class="mt-1 text-sm text-slate-600">Accounting &rarr; Budget &rarr; Cashier disbursement.</p></a>
+            <a class="rounded-xl bg-slate-50 p-4 hover:bg-gold-50" href="{{ route('staff.job-payments.index') }}"><p class="font-bold">Job payments</p><p class="mt-1 text-sm text-slate-600">Release completed-job earnings into provider wallets.</p></a>
         </div>
     </section>
 </x-layouts.admin>

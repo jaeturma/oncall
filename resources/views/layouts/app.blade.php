@@ -27,6 +27,9 @@
                 @can('viewQueue', App\Models\Withdrawal::class)
                     <a class="rounded-lg px-4 py-3 font-semibold hover:bg-white/10" href="{{ route('staff.withdrawals.index') }}">Withdrawal queue</a>
                 @endcan
+                @can('viewQueue', App\Models\JobPayment::class)
+                    <a class="rounded-lg px-4 py-3 font-semibold hover:bg-white/10" href="{{ route('staff.job-payments.index') }}">Job payments</a>
+                @endcan
                 @if(auth()->user()->role === App\Enums\UserRole::Admin)<a class="rounded-lg px-4 py-3 font-semibold hover:bg-white/10" href="{{ route('admin.dashboard') }}">Administration</a>@endif
                 <a class="rounded-lg px-4 py-3 font-semibold hover:bg-white/10" href="{{ route('verification.index') }}">Identity verification</a>
                 @if(auth()->user()->providerProfile)

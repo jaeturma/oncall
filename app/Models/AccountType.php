@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['name', 'slug', 'registration_fee', 'sponsor_commission_type', 'sponsor_commission_value', 'requires_identity_verification', 'active'])]
+#[Fillable(['name', 'slug', 'registration_fee', 'sponsor_commission_type', 'sponsor_commission_value', 'platform_commission_percent', 'requires_identity_verification', 'active'])]
 class AccountType extends Model
 {
     protected function casts(): array
@@ -16,6 +16,7 @@ class AccountType extends Model
             'registration_fee' => 'decimal:2',
             'sponsor_commission_type' => CommissionType::class,
             'sponsor_commission_value' => 'decimal:2',
+            'platform_commission_percent' => 'decimal:2',
             'requires_identity_verification' => 'boolean',
             'active' => 'boolean',
         ];

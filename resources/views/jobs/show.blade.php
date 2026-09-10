@@ -42,6 +42,46 @@
             @endif
         </article>
 
+        @if($job->jobPayment)
+            @php($payment = $job->jobPayment)
+            <section class="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+                <h2 class="text-xl font-black">Payment</h2>
+                <dl class="mt-4 grid gap-4 sm:grid-cols-3 text-sm">
+                    <div><dt class="text-slate-500">Agreed price</dt><dd class="text-lg font-bold">PHP {{ number_format((float) $payment->gross_amount, 2) }}</dd></div>
+                    <div><dt class="text-slate-500">Oncall platform fee</dt><dd class="text-lg font-bold">PHP {{ number_format((float) $payment->platform_fee, 2) }}</dd></div>
+                    <div><dt class="text-slate-500">Provider receives</dt><dd class="text-lg font-black text-navy-900">PHP {{ number_format((float) $payment->net_amount, 2) }}</dd></div>
+                </dl>
+                <p class="mt-4 rounded-lg bg-slate-50 p-3 text-sm text-slate-600">Status: <span class="font-bold">{{ str($payment->status->value)->title() }}</span> &mdash;
+                    @switch($payment->status)
+                        @case(App\Enums\JobPaymentStatus::Pending) waiting for the Service Finder to confirm payment. @break
+                        @case(App\Enums\JobPaymentStatus::Paid) payment confirmed; provider earning is pending Oncall release. @break
+                        @case(App\Enums\JobPaymentStatus::Released) the provider earning is in their wallet. @break
+                        @case(App\Enums\JobPaymentStatus::Reversed) this earning was reversed. @break
+                    @endswitch
+                </p>
+
+                @can('confirm', $payment)
+                    <form class="mt-5 grid gap-4 border-t border-slate-200 pt-5 sm:grid-cols-2" method="POST" action="{{ route('job-payments.confirm', $payment) }}">
+                        @csrf @method('PATCH')
+                        <p class="text-sm text-slate-600 sm:col-span-2">Confirm you have paid the provider PHP {{ number_format((float) $payment->gross_amount, 2) }} for this job. Oncall records the payment; it does not process it.</p>
+                        <label class="grid gap-2 font-semibold">How you paid
+                            <select class="rounded-lg border border-slate-300 p-3" name="payment_method" required>
+                                <option value="Cash">Cash</option><option value="GCash">GCash</option><option value="Bank transfer">Bank transfer</option><option value="Maya">Maya</option>
+                            </select>
+                            @error('payment_method')<span class="text-sm font-normal text-red-700">{{ $message }}</span>@enderror
+                        </label>
+                        <label class="grid gap-2 font-semibold">Reference
+                            <input class="rounded-lg border border-slate-300 p-3" type="text" name="payment_reference" maxlength="120" placeholder="Receipt no. / transaction id / 'paid in cash on site'" required>
+                            @error('payment_reference')<span class="text-sm font-normal text-red-700">{{ $message }}</span>@enderror
+                        </label>
+                        <button class="justify-self-start rounded-lg bg-gold-400 px-5 py-3 font-bold text-navy-900 hover:bg-gold-500 sm:col-span-2">Confirm payment made</button>
+                    </form>
+                @elseif($payment->status === App\Enums\JobPaymentStatus::Pending)
+                    <p class="mt-4 text-sm text-slate-500">The Service Finder confirms payment from this page once the job is done.</p>
+                @endcan
+            </section>
+        @endif
+
         <section class="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
             <div class="flex flex-wrap items-start justify-between gap-3"><div><h2 class="text-xl font-black">Booking record</h2><p class="mt-1 text-sm text-slate-600">Messages, agreements, evidence, and confirmations are retained with this job.</p></div><span class="rounded-full bg-gold-100 px-3 py-1 text-xs font-bold text-navy-900">Stay on Oncall. Stay protected.</span></div>
             <div class="mt-5 grid gap-4">

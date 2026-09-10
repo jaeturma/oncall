@@ -33,6 +33,11 @@
                 </label>
             </div>
 
+            <label class="grid gap-2 font-semibold">Oncall platform commission (% of a completed job's agreed price)
+                <input class="rounded-lg border border-slate-300 p-3" type="number" name="platform_commission_percent" min="0" max="100" step="0.01" value="{{ old('platform_commission_percent', $accountType->platform_commission_percent) }}" placeholder="Leave blank to use the global default">
+                <span class="text-sm font-normal text-slate-500">Blank uses <code>config('oncall.platform.commission_percent')</code> ({{ config('oncall.platform.commission_percent') }}%).</span>
+            </label>
+
             <label class="flex items-start gap-3 font-semibold"><input class="mt-1" type="checkbox" name="requires_identity_verification" value="1" @checked(old('requires_identity_verification', $accountType->requires_identity_verification ?? true))> Requires identity verification</label>
             <label class="flex items-start gap-3 font-semibold"><input class="mt-1" type="checkbox" name="active" value="1" @checked(old('active', $accountType->active ?? true))> Active (available to new registrations)</label>
 

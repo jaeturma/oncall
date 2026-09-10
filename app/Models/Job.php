@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 #[Fillable(['service_request_id', 'service_finder_id', 'provider_id', 'agreed_price', 'status', 'accepted_at', 'on_the_way_at', 'started_at', 'completed_at', 'cancelled_at'])]
 #[UsePolicy(JobPolicy::class)]
@@ -53,6 +54,11 @@ class Job extends Model
     public function reviews(): HasMany
     {
         return $this->hasMany(Review::class);
+    }
+
+    public function jobPayment(): HasOne
+    {
+        return $this->hasOne(JobPayment::class);
     }
 
     /** @return list<JobStatus> */
