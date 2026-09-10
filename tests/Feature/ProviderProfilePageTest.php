@@ -5,10 +5,12 @@ namespace Tests\Feature;
 use App\Enums\UserRole;
 use App\Enums\UserStatus;
 use App\Enums\VerificationStatus;
+use App\Models\Job;
 use App\Models\Municipality;
 use App\Models\ProviderDocument;
 use App\Models\ProviderProfile;
 use App\Models\Province;
+use App\Models\Review;
 use App\Models\Service;
 use App\Models\User;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
@@ -67,6 +69,21 @@ class ProviderProfilePageTest extends TestCase
         $profile->update(['verification_status' => VerificationStatus::Pending]);
 
         $this->get(route('providers.show', $profile))->assertNotFound();
+    }
+
+    public function test_reviews_left_for_the_provider_appear_on_the_public_profile(): void
+    {
+        [$profile, $provider] = $this->searchableProvider();
+        $reviewer = User::factory()->create(['name' => 'Cristina Bautista']);
+        $job = Job::factory()->create(['provider_id' => $provider->id, 'service_finder_id' => $reviewer->id]);
+        Review::create(['job_id' => $job->id, 'reviewer_id' => $reviewer->id, 'reviewee_id' => $provider->id, 'rating' => 5, 'comment' => 'Arrived on time and fixed everything.']);
+        $provider->update(['rating_cached' => 5, 'reviews_count' => 1]);
+
+        $this->get(route('providers.show', $profile))
+            ->assertOk()
+            ->assertSee('Arrived on time and fixed everything.')
+            ->assertSee('Cristina') // first name only
+            ->assertDontSee('Cristina Bautista');
     }
 
     /**

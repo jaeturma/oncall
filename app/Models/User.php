@@ -19,7 +19,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-#[Fillable(['name', 'email', 'phone', 'password', 'role', 'status', 'identity_verification_status', 'sponsor_user_id', 'account_type_id'])]
+#[Fillable(['name', 'email', 'phone', 'password', 'role', 'status', 'identity_verification_status', 'sponsor_user_id', 'account_type_id', 'rating_cached', 'reviews_count'])]
 #[Hidden(['password', 'remember_token'])]
 #[ObservedBy([UserObserver::class])]
 class User extends Authenticatable
@@ -159,6 +159,7 @@ class User extends Authenticatable
             'role' => UserRole::class,
             'status' => UserStatus::class,
             'identity_verification_status' => VerificationStatus::class,
+            'rating_cached' => 'decimal:2',
         ];
     }
 }

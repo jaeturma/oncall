@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Enums\CommissionStatus;
 use App\Enums\CommissionType;
+use App\Enums\DisputeCategory;
 use App\Enums\DocumentType;
 use App\Enums\JobStatus;
 use App\Enums\ServiceRequestStatus;
@@ -19,8 +20,10 @@ use App\Models\Service;
 use App\Models\ServiceRequest;
 use App\Models\User;
 use App\Services\CommissionEngine;
+use App\Services\DisputeService;
 use App\Services\JobPaymentService;
 use App\Services\JobService;
+use App\Services\ReviewService;
 use App\Services\WalletLedger;
 use App\Services\WithdrawalWorkflow;
 use Illuminate\Database\Seeder;
@@ -116,6 +119,8 @@ class DemoSeeder extends Seeder
         $payment = $job->jobPayment;
         app(JobPaymentService::class)->confirmPaid($payment, $finder, 'GCash', 'GCash ref 9931-0022');
         app(JobPaymentService::class)->release($payment->fresh(), $accounting);
+        app(ReviewService::class)->create($job->fresh(), $finder, ['rating' => 5, 'comment' => 'Fast, tidy, and explained the fix. Would book again.']);
+        app(ReviewService::class)->create($job->fresh(), $lito, ['rating' => 5, 'comment' => 'Clear instructions and prompt payment.']);
 
         // A second job whose payment is confirmed but not yet released, so the
         // staff Job payments queue has something to act on.
@@ -144,6 +149,36 @@ class DemoSeeder extends Seeder
         ]);
         app(JobService::class)->transition($job2, $grace, JobStatus::Completed, 'Watched the kids 6-10pm.');
         app(JobPaymentService::class)->confirmPaid($job2->jobPayment, $finder, 'Cash', 'Paid in cash on pickup');
+        app(ReviewService::class)->create($job2->fresh(), $finder, ['rating' => 4, 'comment' => 'Kids were happy. Arrived a few minutes late.']);
+
+        // A third job with an open dispute, so the admin dispute queue and the
+        // payment-freeze are visible in the demo.
+        $arturo = User::query()->where('email', 'arturo@oncall.ph')->first();
+        $arturoProfile = $arturo->providerProfile;
+        $carpentry = Service::query()->where('name', 'Carpenter')->sole();
+        $request3 = ServiceRequest::create([
+            'service_finder_id' => $finder->id,
+            'requested_provider_id' => $arturo->id,
+            'service_id' => $carpentry->id,
+            'province_id' => $arturoProfile->province_id,
+            'municipality_id' => $arturoProfile->municipality_id,
+            'title' => 'Build a shelf unit',
+            'urgency' => ServiceUrgency::Scheduled,
+            'status' => ServiceRequestStatus::Accepted,
+            'safety_acknowledged_at' => now(),
+        ]);
+        $job3 = Job::create([
+            'service_request_id' => $request3->id,
+            'service_finder_id' => $finder->id,
+            'provider_id' => $arturo->id,
+            'agreed_price' => '2500.00',
+            'status' => JobStatus::InProgress,
+            'accepted_at' => now()->subDays(3),
+            'started_at' => now()->subDays(2),
+        ]);
+        app(JobService::class)->transition($job3, $arturo, JobStatus::Completed, 'Shelf built.');
+        app(JobPaymentService::class)->confirmPaid($job3->jobPayment, $finder, 'GCash', 'GCash ref 7712-3300');
+        app(DisputeService::class)->open($job3->fresh(), $finder, DisputeCategory::ServiceNotAsAgreed, 'The shelf is uneven and one bracket is missing. Needs to be fixed or partly refunded.');
     }
 
     private function accountTypes(): void

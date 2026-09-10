@@ -31,7 +31,7 @@
                 <dl class="mt-5 grid gap-4 sm:grid-cols-2">
                     <div>
                         <dt class="text-sm text-slate-500">Rating</dt>
-                        <dd class="text-lg font-bold">{{ $profile->rating_cached ? number_format((float) $profile->rating_cached, 1).' / 5' : 'No ratings yet' }}</dd>
+                        <dd class="text-lg font-bold">{{ $profile->rating_cached ? number_format((float) $profile->rating_cached, 1).' / 5' : 'No ratings yet' }}<span class="ml-1 text-sm font-normal text-slate-500">({{ $reviewsCount }} {{ str('review')->plural($reviewsCount) }})</span></dd>
                     </div>
                     <div>
                         <dt class="text-sm text-slate-500">Completed services</dt>
@@ -69,6 +69,23 @@
                     @endforeach
                 </div>
             </section>
+
+            @if($reviews->isNotEmpty())
+                <section class="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+                    <h2 class="text-xl font-black">What Service Finders said</h2>
+                    <div class="mt-4 grid gap-4">
+                        @foreach($reviews as $review)
+                            <article class="rounded-xl border border-slate-200 p-4">
+                                <div class="flex flex-wrap items-center justify-between gap-2">
+                                    <p class="font-black text-gold-600">{{ str_repeat('★', $review->rating) }}<span class="text-slate-300">{{ str_repeat('★', 5 - $review->rating) }}</span></p>
+                                    <p class="text-xs text-slate-500">{{ str($review->reviewer->name)->before(' ') }} &middot; {{ $review->created_at->format('M Y') }}</p>
+                                </div>
+                                <p class="mt-2 whitespace-pre-line text-slate-700">{{ $review->comment }}</p>
+                            </article>
+                        @endforeach
+                    </div>
+                </section>
+            @endif
 
             @if($reveal && $profile->bio)
                 <section class="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">

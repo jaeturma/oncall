@@ -20,7 +20,8 @@ class JobPaymentPolicy
     public function release(User $user, JobPayment $payment): bool
     {
         return in_array($user->role, self::RELEASERS, true)
-            && $payment->status === JobPaymentStatus::Paid;
+            && $payment->status === JobPaymentStatus::Paid
+            && ! $payment->job->dispute?->isOpen();
     }
 
     public function reverse(User $user, JobPayment $payment): bool

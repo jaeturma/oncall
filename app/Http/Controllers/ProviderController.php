@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\UserRole;
 use App\Models\ProviderProfile;
+use App\Models\Review;
 use App\Models\ServiceRequest;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -37,10 +38,20 @@ class ProviderController extends Controller
             $providerProfile->load('user:id,name');
         }
 
+        $reviews = Review::query()
+            ->where('reviewee_id', $providerProfile->user_id)
+            ->whereNotNull('comment')
+            ->with('reviewer:id,name')
+            ->latest('id')
+            ->limit(10)
+            ->get();
+
         return view('providers.show', [
             'profile' => $providerProfile,
             'reveal' => $reveal,
             'canRequest' => $reveal && $viewer->can('create', ServiceRequest::class),
+            'reviews' => $reviews,
+            'reviewsCount' => (int) ($providerProfile->user()->value('reviews_count') ?? 0),
         ]);
     }
 }

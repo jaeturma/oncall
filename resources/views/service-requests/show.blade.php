@@ -8,6 +8,7 @@
         <dl class="mt-6 grid gap-4 text-sm sm:grid-cols-2">
             <div><dt class="font-bold">Location</dt><dd class="text-slate-600">{{ $serviceRequest->municipality?->name }}, {{ $serviceRequest->province->name }}</dd></div>
             <div><dt class="font-bold">Urgency</dt><dd class="text-slate-600">{{ str($serviceRequest->urgency->value)->replace('_', ' ')->title() }}</dd></div>
+            <div><dt class="font-bold">Requested by</dt><dd class="text-slate-600">{{ $serviceRequest->serviceFinder->name }}@if($serviceRequest->serviceFinder->rating_cached) &middot; &#9733; {{ number_format((float) $serviceRequest->serviceFinder->rating_cached, 1) }} ({{ $serviceRequest->serviceFinder->reviews_count }})@else &middot; no ratings yet @endif</dd></div>
             @if($serviceRequest->needed_at)<div><dt class="font-bold">Needed at</dt><dd class="text-slate-600">{{ $serviceRequest->needed_at->format('M j, Y g:i A') }}</dd></div>@endif
             @if($serviceRequest->budget_min || $serviceRequest->budget_max)<div><dt class="font-bold">Budget</dt><dd class="text-slate-600">PHP {{ $serviceRequest->budget_min ?? '0.00' }} – {{ $serviceRequest->budget_max ?? 'Open' }}</dd></div>@endif
         </dl>

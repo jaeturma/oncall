@@ -61,12 +61,16 @@ class Job extends Model
         return $this->hasOne(JobPayment::class);
     }
 
+    public function dispute(): HasOne
+    {
+        return $this->hasOne(Dispute::class);
+    }
+
     /** @return list<JobStatus> */
     public function allowedTransitionsFor(User $user): array
     {
         $participantActions = match ($this->status) {
-            JobStatus::Accepted, JobStatus::OnTheWay, JobStatus::InProgress => [JobStatus::Cancelled, JobStatus::Disputed],
-            JobStatus::Completed => [JobStatus::Disputed],
+            JobStatus::Accepted, JobStatus::OnTheWay, JobStatus::InProgress => [JobStatus::Cancelled],
             default => [],
         };
 

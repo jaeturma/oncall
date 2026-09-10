@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\DisputeCategory;
 use App\Enums\JobStatus;
 use App\Enums\ServiceRequestStatus;
 use App\Enums\UserRole;
@@ -90,8 +91,9 @@ class JobTest extends TestCase
         [$finder, $provider, $serviceRequest] = $this->participantsAndRequest();
         $job = $this->acceptedJob($serviceRequest, $finder, $provider, JobStatus::Completed);
 
-        $this->actingAs($finder)->patch(route('jobs.status.update', $job), ['status' => JobStatus::Disputed->value, 'notes' => 'Work outcome disputed'])->assertRedirect();
+        $this->actingAs($finder)->post(route('disputes.store', $job), ['category' => DisputeCategory::ServiceNotAsAgreed->value, 'description' => 'The work outcome was not what we agreed on.'])->assertRedirect();
         $this->assertSame(JobStatus::Disputed, $job->fresh()->status);
+        $this->assertDatabaseHas('disputes', ['job_id' => $job->id, 'raised_by' => $finder->id, 'against_user_id' => $provider->id]);
         $this->actingAs($provider)->patch(route('jobs.status.update', $job), ['status' => JobStatus::Completed->value])->assertForbidden();
     }
 

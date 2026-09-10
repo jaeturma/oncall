@@ -15,8 +15,8 @@
             <section class="mt-6 rounded-xl bg-gold-50 p-5 text-navy-900">
                 <h3 class="font-black">Confirmed booking contacts</h3>
                 <div class="mt-3 grid gap-4 sm:grid-cols-2">
-                    <div><p class="font-bold">Service Finder: {{ $job->serviceFinder->name }}</p><p>{{ $job->serviceFinder->email }}</p>@if($job->serviceFinder->phone)<p>{{ $job->serviceFinder->phone }}</p>@endif</div>
-                    <div><p class="font-bold">Provider: {{ $job->provider->name }}</p><p>{{ $job->provider->email }}</p>@if($job->provider->phone)<p>{{ $job->provider->phone }}</p>@endif</div>
+                    <div><p class="font-bold">Service Finder: {{ $job->serviceFinder->name }} @if($job->serviceFinder->rating_cached)<span class="font-normal">&middot; &#9733; {{ number_format((float) $job->serviceFinder->rating_cached, 1) }}</span>@endif</p><p>{{ $job->serviceFinder->email }}</p>@if($job->serviceFinder->phone)<p>{{ $job->serviceFinder->phone }}</p>@endif</div>
+                    <div><p class="font-bold">Provider: {{ $job->provider->name }} @if($job->provider->rating_cached)<span class="font-normal">&middot; &#9733; {{ number_format((float) $job->provider->rating_cached, 1) }}</span>@endif</p><p>{{ $job->provider->email }}</p>@if($job->provider->phone)<p>{{ $job->provider->phone }}</p>@endif</div>
                 </div>
                 <p class="mt-4 text-sm">Contact is shown only to the assigned participants after booking confirmation. Keep agreements and job evidence recorded on Oncall.</p>
             </section>
@@ -80,6 +80,38 @@
                     <p class="mt-4 text-sm text-slate-500">The Service Finder confirms payment from this page once the job is done.</p>
                 @endcan
             </section>
+        @endif
+
+        @if($job->dispute)
+            @php($dispute = $job->dispute)
+            <section class="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-red-200">
+                <h2 class="text-xl font-black text-red-800">Dispute</h2>
+                <p class="mt-2 text-sm"><span class="font-bold">{{ str($dispute->status->value)->replace('_', ' ')->title() }}</span> &middot; {{ str($dispute->category->value)->replace('_', ' ')->title() }} &middot; raised by {{ $dispute->raised_by === auth()->id() ? 'you' : ($dispute->raised_by === $job->service_finder_id ? 'the Service Finder' : 'the provider') }}</p>
+                <p class="mt-2 whitespace-pre-line text-slate-700">{{ $dispute->description }}</p>
+                @if($dispute->resolution)<p class="mt-3 rounded-lg bg-slate-50 p-3 text-sm"><span class="font-bold">Resolution:</span> {{ $dispute->resolution }}</p>@endif
+                @can('withdraw', $dispute)
+                    <form class="mt-4" method="POST" action="{{ route('disputes.withdraw', $dispute) }}">@csrf @method('PATCH')<button class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-bold">Withdraw dispute</button></form>
+                @endcan
+            </section>
+        @elseif(Illuminate\Support\Facades\Gate::allows('create', [App\Models\Dispute::class, $job]))
+            <details class="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+                <summary class="cursor-pointer font-black">Raise a dispute</summary>
+                <p class="mt-3 text-sm text-slate-600">Use this only if something went wrong with the service or payment. An admin reviews it, and the job payment is frozen until it is resolved.</p>
+                <form class="mt-5 grid gap-4" method="POST" action="{{ route('disputes.store', $job) }}">
+                    @csrf
+                    <label class="grid gap-2 font-semibold">What went wrong?
+                        <select class="rounded-lg border border-slate-300 p-3" name="category" required>
+                            @foreach(App\Enums\DisputeCategory::cases() as $category)<option value="{{ $category->value }}">{{ str($category->value)->replace('_', ' ')->title() }}</option>@endforeach
+                        </select>
+                        @error('category')<span class="text-sm font-normal text-red-700">{{ $message }}</span>@enderror
+                    </label>
+                    <label class="grid gap-2 font-semibold">Describe what happened
+                        <textarea class="rounded-lg border border-slate-300 p-3" name="description" rows="4" minlength="20" maxlength="3000" required>{{ old('description') }}</textarea>
+                        @error('description')<span class="text-sm font-normal text-red-700">{{ $message }}</span>@enderror
+                    </label>
+                    <button class="justify-self-start rounded-lg border border-red-300 px-5 py-3 font-bold text-red-700">Open dispute</button>
+                </form>
+            </details>
         @endif
 
         <section class="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">

@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Models\AccountType;
 use App\Models\Commission;
+use App\Models\Dispute;
 use App\Models\EnforcementCase;
 use App\Models\Job;
 use App\Models\JobMessage;
@@ -14,6 +15,7 @@ use App\Models\UserReport;
 use App\Models\Withdrawal;
 use App\Policies\AccountTypePolicy;
 use App\Policies\CommissionPolicy;
+use App\Policies\DisputePolicy;
 use App\Policies\EnforcementCasePolicy;
 use App\Policies\JobMessagePolicy;
 use App\Policies\JobPaymentPolicy;
@@ -52,5 +54,6 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(Commission::class, CommissionPolicy::class);
         Gate::policy(Withdrawal::class, WithdrawalPolicy::class);
         Gate::policy(JobPayment::class, JobPaymentPolicy::class);
+        Gate::policy(Dispute::class, DisputePolicy::class);
     }
 }

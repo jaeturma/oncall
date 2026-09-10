@@ -20,10 +20,12 @@ class ReviewService
             $revieweeId = $reviewer->id === $lockedJob->service_finder_id ? $lockedJob->provider_id : $lockedJob->service_finder_id;
             $review = $lockedJob->reviews()->create(['reviewer_id' => $reviewer->id, 'reviewee_id' => $revieweeId, ...$attributes]);
 
-            if ($revieweeId === $lockedJob->provider_id) {
-                $average = Review::where('reviewee_id', $revieweeId)->avg('rating');
-                User::findOrFail($revieweeId)->providerProfile()->update(['rating_cached' => round((float) $average, 2)]);
-            }
+            $reviewee = User::findOrFail($revieweeId);
+            $stats = Review::where('reviewee_id', $revieweeId)->selectRaw('avg(rating) as average, count(*) as total')->first();
+            $rating = round((float) $stats->average, 2);
+
+            $reviewee->update(['rating_cached' => $rating, 'reviews_count' => (int) $stats->total]);
+            $reviewee->providerProfile()->update(['rating_cached' => $rating]);
 
             return $review;
         });

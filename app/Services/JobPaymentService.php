@@ -39,6 +39,8 @@ class JobPaymentService
                 throw new ConflictHttpException('This job payment has already been confirmed.');
             }
 
+            $this->assertNoOpenDispute($locked);
+
             $before = $locked->toArray();
 
             $earning = $this->ledger->post(
@@ -74,6 +76,7 @@ class JobPaymentService
                 throw new ConflictHttpException('Only a confirmed job payment can be released.');
             }
 
+            $this->assertNoOpenDispute($locked);
             $before = $locked->toArray();
 
             if ($locked->earningTransaction?->status === WalletTransactionStatus::Pending) {
@@ -110,6 +113,40 @@ class JobPaymentService
 
             return $locked;
         });
+    }
+
+    /**
+     * Dispute resolution: reduce the provider's net for this job by $refundAmount.
+     */
+    public function applyRefund(JobPayment $payment, string $refundAmount, User $staff, string $reason): void
+    {
+        DB::transaction(function () use ($payment, $refundAmount, $staff, $reason): void {
+            $locked = JobPayment::whereKey($payment)->lockForUpdate()->firstOrFail();
+            $earning = $locked->earningTransaction;
+
+            if ($earning === null || bccomp($refundAmount, '0', 2) !== 1) {
+                return;
+            }
+
+            if ($earning->status === WalletTransactionStatus::Posted) {
+                $this->ledger->post($locked->provider, WalletTransactionType::Adjustment, bcmul($refundAmount, '-1', 2), WalletTransactionStatus::Posted, 'Dispute partial refund: '.$reason, $locked);
+            } elseif ($earning->status === WalletTransactionStatus::Pending) {
+                $this->ledger->void($earning);
+                $reduced = bcsub((string) $locked->net_amount, $refundAmount, 2);
+                $replacement = $this->ledger->post($locked->provider, WalletTransactionType::JobEarning, $reduced, WalletTransactionStatus::Posted, 'Job earning after dispute partial refund', $locked);
+                $locked->update(['earning_transaction_id' => $replacement->id]);
+            }
+
+            $locked->update(['status' => JobPaymentStatus::Released, 'released_by' => $staff->id, 'released_at' => now(), 'notes' => $reason]);
+            $this->audit($staff, 'job_payment.partial_refund', $locked, []);
+        });
+    }
+
+    private function assertNoOpenDispute(JobPayment $payment): void
+    {
+        if ($payment->job->dispute?->isOpen()) {
+            throw new ConflictHttpException('This job has an open dispute; the payment is frozen until it is resolved.');
+        }
     }
 
     /**

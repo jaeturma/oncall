@@ -5,9 +5,10 @@
         @endforeach
     </div>
     <section class="mt-8 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
-        <h2 class="text-xl font-black">Finance &amp; sponsorship</h2>
+        <h2 class="text-xl font-black">Finance, disputes &amp; sponsorship</h2>
         <div class="mt-4 grid gap-4 md:grid-cols-3">
-            <a class="rounded-xl bg-slate-50 p-4 hover:bg-gold-50" href="{{ route('admin.account-types.index') }}"><p class="font-bold">Account types</p><p class="mt-1 text-sm text-slate-600">Registration fees &amp; sponsor commission rules.</p></a>
+            <a class="rounded-xl bg-slate-50 p-4 hover:bg-gold-50" href="{{ route('admin.disputes.index') }}"><p class="font-bold">Disputes</p><p class="mt-1 text-sm text-slate-600">Resolve job disputes; payments stay frozen until you do.</p></a>
+            <a class="rounded-xl bg-slate-50 p-4 hover:bg-gold-50" href="{{ route('admin.account-types.index') }}"><p class="font-bold">Account types</p><p class="mt-1 text-sm text-slate-600">Registration fees, sponsor &amp; platform commission rules.</p></a>
             <a class="rounded-xl bg-slate-50 p-4 hover:bg-gold-50" href="{{ route('admin.commissions.index') }}"><p class="font-bold">Sponsor commissions</p><p class="mt-1 text-sm text-slate-600">Approve or reverse posted commissions.</p></a>
             <a class="rounded-xl bg-slate-50 p-4 hover:bg-gold-50" href="{{ route('staff.withdrawals.index') }}"><p class="font-bold">Withdrawal queue</p><p class="mt-1 text-sm text-slate-600">Accounting &rarr; Budget &rarr; Cashier disbursement.</p></a>
             <a class="rounded-xl bg-slate-50 p-4 hover:bg-gold-50" href="{{ route('staff.job-payments.index') }}"><p class="font-bold">Job payments</p><p class="mt-1 text-sm text-slate-600">Release completed-job earnings into provider wallets.</p></a>
