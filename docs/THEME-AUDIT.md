@@ -1,7 +1,10 @@
 # THEME-AUDIT.md — Oncall Philippines
 
-Audit of the supplied HTML theme in `oncall-philippines-mwe/theme-source/`.
-Status: **learning phase only — no theme code has been converted.** Original theme files are untouched.
+Audit of the supplied HTML theme, kept locally (git-ignored) at `oncall-philippines-mvp/template-reference/`
+— originally delivered as `oncall-philippines-mwe/theme-source/`, the path used in older notes below.
+The build-rule references in this doc (`AGENTS.md`, `RULES.md`, `docs/ARCHITECTURE.md`, `docs/reference/SEED-SERVICES.md`)
+point at that reference package's own docs; the equivalent standing rules now live in the project root `CLAUDE.md`.
+Status: theme is used as visual reference only; the app is rebuilt in Tailwind, not converted from the Bootstrap source.
 
 ---
 
@@ -21,10 +24,10 @@ Status: **learning phase only — no theme code has been converted.** Original t
 
 ---
 
-## 2. File structure (`theme-source/`)
+## 2. File structure (`template-reference/`)
 
 ```
-theme-source/
+template-reference/
 ├── *.html                      13 page templates + index_preview.html (demo picker)
 │   ├── index.html              Landing / home
 │   ├── about.html              About + features + pricing
