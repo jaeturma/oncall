@@ -1,6 +1,6 @@
 <x-layouts.admin title="Disputes">
     <div class="grid gap-6">
-        @if(session('status'))<div class="rounded-xl border border-gold-200 bg-gold-50 p-4 font-semibold text-navy-900">{{ session('status') }}</div>@endif
+        <x-flash />
         <div><h1 class="text-3xl font-black">Disputes</h1><p class="mt-2 text-slate-600">While a dispute is open the job's payment cannot be released. Resolving it releases, reverses or adjusts the payment.</p></div>
 
         <div class="grid gap-4">

@@ -1,6 +1,6 @@
 <x-layouts.app title="Withdrawal queue">
     <div class="grid gap-6">
-        @if(session('status'))<div class="rounded-xl border border-gold-200 bg-gold-50 p-4 font-semibold text-navy-900">{{ session('status') }}</div>@endif
+        <x-flash />
         <div><p class="font-bold uppercase tracking-widest text-navy-800">{{ str($actingRole->value)->title() }}</p><h1 class="text-3xl font-black">Withdrawal queue</h1><p class="mt-2 text-slate-600">Requested &rarr; Accounting review &rarr; Budget approval &rarr; Cashier disbursement. You can only act on the step assigned to your role.</p></div>
 
         <div class="grid gap-4">

@@ -9,7 +9,7 @@
                 <p class="mt-3 text-slate-600">Agreed price: PHP {{ $job->agreed_price }}</p>
             </a>
         @empty
-            <div class="rounded-2xl bg-white p-8 text-center text-slate-600 shadow-sm ring-1 ring-slate-200">No confirmed bookings yet.</div>
+            <x-empty-state title="No confirmed bookings yet" message="Accepted service requests become bookings and show up here." />
         @endforelse
         {{ $jobs->links() }}
     </div>

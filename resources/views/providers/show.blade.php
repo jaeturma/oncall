@@ -20,6 +20,7 @@
         </div>
     </section>
 
+    <div class="mx-auto max-w-4xl px-6 pt-8"><x-emergency-notice /></div>
     <main class="mx-auto grid max-w-4xl gap-6 px-6 py-10 lg:grid-cols-[1fr_20rem]">
         <div class="grid gap-6">
             <section class="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">

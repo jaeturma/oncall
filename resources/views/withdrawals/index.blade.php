@@ -1,6 +1,6 @@
 <x-layouts.app title="Withdrawals">
     <div class="grid gap-6">
-        @if(session('status'))<div class="rounded-xl border border-gold-200 bg-gold-50 p-4 font-semibold text-navy-900">{{ session('status') }}</div>@endif
+        <x-flash />
 
         <div class="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
             <div class="flex flex-wrap items-baseline justify-between gap-3">

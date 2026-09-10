@@ -1,6 +1,6 @@
 <x-layouts.app title="Wallet">
     <div class="grid gap-6">
-        @if(session('status'))<div class="rounded-xl border border-gold-200 bg-gold-50 p-4 font-semibold text-navy-900">{{ session('status') }}</div>@endif
+        <x-flash />
 
         <div class="grid gap-4 sm:grid-cols-2">
             <div class="rounded-2xl border-t-4 border-gold-400 bg-white p-6 shadow-sm">

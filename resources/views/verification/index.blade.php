@@ -1,6 +1,6 @@
 <x-layouts.app title="Identity verification">
     <div class="grid gap-6">
-        @if(session('status'))<div class="rounded-xl border border-gold-200 bg-gold-50 p-4 font-semibold text-navy-900">{{ session('status') }}</div>@endif
+        <x-flash />
         <section class="rounded-2xl bg-white p-6 shadow-sm">
             <div class="flex flex-wrap items-start justify-between gap-4">
                 <div><p class="font-bold uppercase tracking-widest text-navy-800">Private review</p><h2 class="mt-1 text-2xl font-black">Verify your identity</h2><p class="mt-2 max-w-2xl text-slate-600">Documents are stored privately and can only be opened by you and authorized administrators. A badge appears only after approval.</p></div>

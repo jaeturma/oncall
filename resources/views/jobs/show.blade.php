@@ -1,5 +1,5 @@
 <x-layouts.app title="Booking and job">
-    @if(session('status'))<p class="mb-5 rounded-lg bg-gold-50 p-4 text-navy-900">{{ session('status') }}</p>@endif
+    <x-flash class="mb-5" />
     <div class="grid gap-6">
         <article class="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200 sm:p-8">
             <div class="flex flex-wrap items-start justify-between gap-3">

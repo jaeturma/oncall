@@ -1,6 +1,6 @@
 <x-layouts.app title="Notifications">
     <div class="grid gap-6">
-        @if(session('status'))<div class="rounded-xl border border-gold-200 bg-gold-50 p-4 font-semibold text-navy-900">{{ session('status') }}</div>@endif
+        <x-flash />
 
         <div class="flex flex-wrap items-end justify-between gap-3">
             <div><h1 class="text-3xl font-black">Notifications</h1><p class="mt-2 text-slate-600">{{ $unreadCount }} unread</p></div>
@@ -23,7 +23,7 @@
                     </form>
                 </article>
             @empty
-                <div class="rounded-2xl bg-white p-10 text-center text-slate-500 shadow-sm ring-1 ring-slate-200">You have no notifications yet.</div>
+                <x-empty-state title="You have no notifications yet" message="Updates about your requests, bookings, wallet, and account land here." />
             @endforelse
         </div>
         <div>{{ $notifications->links() }}</div>

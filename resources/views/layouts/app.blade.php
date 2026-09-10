@@ -8,8 +8,7 @@
     <div class="mx-auto grid max-w-7xl gap-8 px-6 py-10 md:grid-cols-[16rem_1fr]">
         <aside class="self-start overflow-hidden rounded-2xl bg-navy-900 text-white shadow-lg">
             <div class="border-b border-white/10 p-6 text-center">
-                @php($initials = collect(explode(' ', trim(auth()->user()->name)))->filter()->take(2)->map(fn ($part) => mb_substr($part, 0, 1))->implode(''))
-                <span class="mx-auto flex size-20 items-center justify-center rounded-full border-4 border-white/15 bg-white/10 text-2xl font-black uppercase tracking-wide text-gold-300" aria-hidden="true">{{ $initials }}</span>
+                <span class="mx-auto flex size-20 items-center justify-center rounded-full border-4 border-white/15 bg-white/10 text-2xl font-black uppercase tracking-wide text-gold-300" aria-hidden="true">{{ auth()->user()->initials }}</span>
                 <p class="mt-3 font-bold">{{ auth()->user()->name }}</p>
                 <p class="text-xs uppercase tracking-widest text-gold-300">Oncall dashboard</p>
             </div>

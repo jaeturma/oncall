@@ -9,7 +9,7 @@
                 <p class="mt-3 text-slate-600">{{ $serviceRequest->municipality?->name ?? $serviceRequest->province->name }} · {{ str($serviceRequest->urgency->value)->replace('_', ' ')->title() }}</p>
             </a>
         @empty
-            <div class="rounded-2xl bg-white p-8 text-center text-slate-600 shadow-sm ring-1 ring-slate-200">No service requests yet.</div>
+            <x-empty-state title="No service requests yet" message="Requests you send or receive will appear here." />
         @endforelse
         {{ $requests->links() }}
     </div>

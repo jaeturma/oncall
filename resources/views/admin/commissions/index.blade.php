@@ -1,6 +1,6 @@
 <x-layouts.admin title="Sponsor commissions">
     <div class="grid gap-6">
-        @if(session('status'))<div class="rounded-xl border border-gold-200 bg-gold-50 p-4 font-semibold text-navy-900">{{ session('status') }}</div>@endif
+        <x-flash />
         <div><h1 class="text-3xl font-black">Sponsor commissions</h1><p class="mt-2 text-slate-600">Posted when a sponsored user is identity-verified. Approving releases the amount into the sponsor's wallet; reversing posts an opposing ledger entry.</p></div>
 
         <section class="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200">

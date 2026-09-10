@@ -1,6 +1,6 @@
 <x-layouts.admin title="Account types">
     <div class="grid gap-6">
-        @if(session('status'))<div class="rounded-xl border border-gold-200 bg-gold-50 p-4 font-semibold text-navy-900">{{ session('status') }}</div>@endif
+        <x-flash />
         <div class="flex flex-wrap items-end justify-between gap-3">
             <div><h1 class="text-3xl font-black">Account types</h1><p class="mt-2 text-slate-600">Registration fee and sponsor commission rules are configured here, not in code.</p></div>
             <a class="rounded-lg bg-gold-400 px-4 py-2 font-bold text-navy-900 hover:bg-gold-500" href="{{ route('admin.account-types.create') }}">New account type</a>

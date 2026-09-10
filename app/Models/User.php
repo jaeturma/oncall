@@ -12,6 +12,7 @@ use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -143,6 +144,20 @@ class User extends Authenticatable
     public function canRequestService(): bool
     {
         return ! config('oncall.service_requests.require_identity_verification') || $this->isIdentityVerified();
+    }
+
+    /**
+     * Up to two uppercase initials derived from the name, for avatar fallbacks.
+     *
+     * @return Attribute<string, never>
+     */
+    protected function initials(): Attribute
+    {
+        return Attribute::get(fn (): string => collect(explode(' ', trim((string) $this->name)))
+            ->filter()
+            ->take(2)
+            ->map(fn (string $part): string => mb_strtoupper(mb_substr($part, 0, 1)))
+            ->implode(''));
     }
 
     /**

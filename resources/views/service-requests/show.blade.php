@@ -1,5 +1,5 @@
 <x-layouts.app title="Service request">
-    @if(session('status'))<p class="mb-5 rounded-lg bg-gold-50 p-4 text-navy-900">{{ session('status') }}</p>@endif
+    <x-flash class="mb-5" />
     <article class="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200 sm:p-8">
         <div class="flex flex-wrap items-start justify-between gap-3">
             <div><p class="text-sm font-bold uppercase tracking-widest text-navy-800">{{ $serviceRequest->service->name }}</p><h2 class="mt-2 text-2xl font-black">{{ $serviceRequest->title }}</h2></div>
