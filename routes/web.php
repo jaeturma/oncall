@@ -28,6 +28,7 @@ use App\Http\Controllers\Provider\AcceptedServiceRequestController;
 use App\Http\Controllers\Provider\AvailabilityController;
 use App\Http\Controllers\Provider\DeclinedServiceRequestController;
 use App\Http\Controllers\Provider\ProfileController;
+use App\Http\Controllers\ProviderController;
 use App\Http\Controllers\ProviderSearchController;
 use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\ServiceRequestController;
@@ -37,6 +38,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', HomeController::class)->name('home');
 Route::get('/find-help', ProviderSearchController::class)->name('providers.search');
+Route::get('/providers/{provider_profile}', ProviderController::class)->name('providers.show');
 Route::get('/locations/{province}/municipalities', [LocationController::class, 'municipalities'])->name('locations.municipalities');
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthenticatedSessionController::class, 'create'])->name('login');
@@ -48,7 +50,7 @@ Route::middleware('guest')->group(function () {
     Route::get('/reset-password/{token}', [PasswordResetController::class, 'reset'])->name('password.reset');
     Route::post('/reset-password', [PasswordResetController::class, 'update'])->name('password.update');
 });
-Route::middleware('auth')->group(function () {
+Route::middleware(['auth', 'account.active'])->group(function () {
     Route::view('/dashboard', 'dashboard')->name('dashboard');
     Route::post('/logout', LogoutController::class)->name('logout');
     Route::get('/admin/catalog', [ServiceCatalogController::class, 'index'])->name('admin.catalog');

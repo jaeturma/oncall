@@ -47,7 +47,7 @@ class ProviderSearchTest extends TestCase
         $response = $this->get(route('providers.search', ['help' => 'service:'.$service->id, 'province_id' => $province->id]));
 
         $response->assertOk()
-            ->assertSee('Local Service Provider')
+            ->assertSee('Verified '.$service->name.' #')
             ->assertSee($municipality->name)
             ->assertSee($service->name)
             ->assertDontSee($provider->name)

@@ -16,7 +16,8 @@ class ServiceCatalogTest extends TestCase
     public function test_initial_catalog_is_seeded(): void
     {
         $this->seed(ServiceCatalogSeeder::class);
-        $this->assertDatabaseHas('services', ['slug' => 'plumbing']);
+        $this->assertDatabaseHas('services', ['slug' => 'plumber', 'active' => true]);
+        $this->assertDatabaseHas('services', ['slug' => 'driver']);
     }
 
     public function test_admin_can_add_a_location_and_guests_can_refine_it(): void

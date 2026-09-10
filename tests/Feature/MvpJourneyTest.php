@@ -37,7 +37,7 @@ class MvpJourneyTest extends TestCase
 
         $this->get(route('providers.search', ['help' => 'service:'.$service->id, 'province_id' => $province->id]))
             ->assertOk()
-            ->assertSee('Local Service Provider')
+            ->assertSee('Verified '.$service->name.' #')
             ->assertDontSee($provider->name)
             ->assertDontSee($provider->email)
             ->assertDontSee($provider->phone);
