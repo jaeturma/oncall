@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Enums\UserRole;
 use App\Models\AccountType;
 use App\Models\Commission;
 use App\Models\Dispute;
@@ -11,6 +12,7 @@ use App\Models\JobMessage;
 use App\Models\JobPayment;
 use App\Models\Review;
 use App\Models\ServiceRequest;
+use App\Models\User;
 use App\Models\UserReport;
 use App\Models\Withdrawal;
 use App\Policies\AccountTypePolicy;
@@ -55,5 +57,7 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(Withdrawal::class, WithdrawalPolicy::class);
         Gate::policy(JobPayment::class, JobPaymentPolicy::class);
         Gate::policy(Dispute::class, DisputePolicy::class);
+
+        Gate::define('view-finance-reports', fn (User $user): bool => in_array($user->role, [UserRole::Admin, UserRole::Accounting], true));
     }
 }

@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\CommissionController as AdminCommissionController
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\DisputeController as AdminDisputeController;
 use App\Http\Controllers\Admin\EnforcementCaseController as AdminEnforcementCaseController;
+use App\Http\Controllers\Admin\FinanceReportController;
 use App\Http\Controllers\Admin\JobController as AdminJobController;
 use App\Http\Controllers\Admin\LocationController;
 use App\Http\Controllers\Admin\ProviderController as AdminProviderController;
@@ -113,6 +114,10 @@ Route::middleware(['auth', 'account.active'])->group(function () {
     Route::patch('/admin/account-types/{account_type}/toggle', [AccountTypeController::class, 'toggle'])->name('admin.account-types.toggle');
     Route::get('/admin/commissions', [AdminCommissionController::class, 'index'])->name('admin.commissions.index');
     Route::patch('/admin/commissions/{commission}', [AdminCommissionController::class, 'update'])->name('admin.commissions.update');
+    Route::get('/admin/finance', [FinanceReportController::class, 'index'])->name('admin.finance.index');
+    Route::get('/admin/finance/ledger', [FinanceReportController::class, 'ledger'])->name('admin.finance.ledger');
+    Route::get('/admin/finance/export', [FinanceReportController::class, 'export'])->name('admin.finance.export');
+    Route::get('/admin/finance/users/{user}/statement', [FinanceReportController::class, 'userStatement'])->name('admin.finance.statement');
     Route::get('/enforcement-cases', [EnforcementCaseController::class, 'index'])->name('enforcement-cases.index');
     Route::get('/enforcement-cases/{enforcement_case}', [EnforcementCaseController::class, 'show'])->name('enforcement-cases.show');
     Route::post('/enforcement-cases/{enforcement_case}/appeal', EnforcementAppealController::class)->name('enforcement-cases.appeal');
