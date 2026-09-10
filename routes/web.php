@@ -1,6 +1,8 @@
 <?php
 
+use App\Http\Controllers\Admin\AccountTypeController;
 use App\Http\Controllers\Admin\AuditLogController;
+use App\Http\Controllers\Admin\CommissionController as AdminCommissionController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\EnforcementCaseController as AdminEnforcementCaseController;
 use App\Http\Controllers\Admin\JobController as AdminJobController;
@@ -32,8 +34,12 @@ use App\Http\Controllers\ProviderController;
 use App\Http\Controllers\ProviderSearchController;
 use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\ServiceRequestController;
+use App\Http\Controllers\SponsorController;
+use App\Http\Controllers\Staff\WithdrawalReviewController;
 use App\Http\Controllers\UserReportController;
 use App\Http\Controllers\VerificationController;
+use App\Http\Controllers\WalletController;
+use App\Http\Controllers\WithdrawalController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', HomeController::class)->name('home');
@@ -84,6 +90,17 @@ Route::middleware(['auth', 'account.active'])->group(function () {
     Route::post('/jobs/{job}/messages', [JobMessageController::class, 'store'])->middleware('throttle:20,1')->name('jobs.messages.store');
     Route::post('/jobs/{job}/reports', [UserReportController::class, 'store'])->middleware('throttle:5,1')->name('jobs.reports.store');
     Route::post('/jobs/{job}/reviews', [ReviewController::class, 'store'])->middleware('throttle:5,1')->name('jobs.reviews.store');
+    Route::get('/wallet', [WalletController::class, 'index'])->name('wallet.index');
+    Route::get('/wallet/withdrawals', [WithdrawalController::class, 'index'])->name('withdrawals.index');
+    Route::post('/wallet/withdrawals', [WithdrawalController::class, 'store'])->middleware('throttle:6,1')->name('withdrawals.store');
+    Route::patch('/wallet/withdrawals/{withdrawal}/cancel', [WithdrawalController::class, 'cancel'])->name('withdrawals.cancel');
+    Route::get('/sponsor/referrals', [SponsorController::class, 'index'])->name('sponsor.referrals');
+    Route::get('/staff/withdrawals', [WithdrawalReviewController::class, 'index'])->name('staff.withdrawals.index');
+    Route::patch('/staff/withdrawals/{withdrawal}', [WithdrawalReviewController::class, 'update'])->name('staff.withdrawals.update');
+    Route::resource('/admin/account-types', AccountTypeController::class)->except(['show', 'destroy'])->parameters(['account-types' => 'account_type'])->names('admin.account-types');
+    Route::patch('/admin/account-types/{account_type}/toggle', [AccountTypeController::class, 'toggle'])->name('admin.account-types.toggle');
+    Route::get('/admin/commissions', [AdminCommissionController::class, 'index'])->name('admin.commissions.index');
+    Route::patch('/admin/commissions/{commission}', [AdminCommissionController::class, 'update'])->name('admin.commissions.update');
     Route::get('/enforcement-cases', [EnforcementCaseController::class, 'index'])->name('enforcement-cases.index');
     Route::get('/enforcement-cases/{enforcement_case}', [EnforcementCaseController::class, 'show'])->name('enforcement-cases.show');
     Route::post('/enforcement-cases/{enforcement_case}/appeal', EnforcementAppealController::class)->name('enforcement-cases.appeal');

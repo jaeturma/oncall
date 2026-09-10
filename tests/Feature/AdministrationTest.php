@@ -45,7 +45,7 @@ class AdministrationTest extends TestCase
         UserReport::factory()->create(['job_id' => $job->id, 'status' => ReportStatus::Submitted]);
         AuditLog::factory()->create(['actor_id' => $admin->id, 'event' => 'admin.test', 'subject_type' => User::class, 'subject_id' => $admin->id]);
 
-        $this->actingAs($admin)->get(route('admin.dashboard'))->assertOk()->assertSee('Users')->assertSee('Providers')->assertSee('Active jobs')->assertSee('Open reports')->assertSee('Finance summary');
+        $this->actingAs($admin)->get(route('admin.dashboard'))->assertOk()->assertSee('Users')->assertSee('Providers')->assertSee('Active jobs')->assertSee('Open reports')->assertSee('Account types')->assertSee('Sponsor commissions');
     }
 
     public function test_admin_can_filter_user_directory_by_role_and_status(): void

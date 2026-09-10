@@ -4,5 +4,12 @@
             <a class="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200 hover:ring-gold-400" href="{{ route($route) }}"><p class="text-sm font-bold uppercase tracking-widest text-navy-800">{{ $label }}</p><p class="mt-3 text-4xl font-black">{{ $metrics[$key] }}</p></a>
         @endforeach
     </div>
-    <section class="mt-8 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200"><h2 class="text-xl font-black">Upcoming administration modules</h2><div class="mt-4 grid gap-4 md:grid-cols-3"><div class="rounded-xl bg-slate-50 p-4"><p class="font-bold">Sponsorship</p><p class="mt-1 text-sm text-slate-600">Prepared for WP-14.</p></div><div class="rounded-xl bg-slate-50 p-4"><p class="font-bold">Account types</p><p class="mt-1 text-sm text-slate-600">Prepared for WP-13.</p></div><div class="rounded-xl bg-slate-50 p-4"><p class="font-bold">Finance summary</p><p class="mt-1 text-sm text-slate-600">Activates as WP-15–WP-19 add commissions, ledger entries, withdrawals, approvals, and reporting.</p></div></div></section>
+    <section class="mt-8 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+        <h2 class="text-xl font-black">Finance &amp; sponsorship</h2>
+        <div class="mt-4 grid gap-4 md:grid-cols-3">
+            <a class="rounded-xl bg-slate-50 p-4 hover:bg-gold-50" href="{{ route('admin.account-types.index') }}"><p class="font-bold">Account types</p><p class="mt-1 text-sm text-slate-600">Registration fees &amp; sponsor commission rules.</p></a>
+            <a class="rounded-xl bg-slate-50 p-4 hover:bg-gold-50" href="{{ route('admin.commissions.index') }}"><p class="font-bold">Sponsor commissions</p><p class="mt-1 text-sm text-slate-600">Approve or reverse posted commissions.</p></a>
+            <a class="rounded-xl bg-slate-50 p-4 hover:bg-gold-50" href="{{ route('staff.withdrawals.index') }}"><p class="font-bold">Withdrawal queue</p><p class="mt-1 text-sm text-slate-600">Accounting &rarr; Budget &rarr; Cashier disbursement.</p></a>
+        </div>
+    </section>
 </x-layouts.admin>

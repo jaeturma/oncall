@@ -22,6 +22,11 @@
                     <a class="rounded-lg px-4 py-3 font-semibold hover:bg-white/10" href="{{ route('jobs.index') }}">Bookings and jobs</a>
                 @endcan
                 <a class="rounded-lg px-4 py-3 font-semibold hover:bg-white/10" href="{{ route('enforcement-cases.index') }}">Safety cases</a>
+                <a class="rounded-lg px-4 py-3 font-semibold hover:bg-white/10" href="{{ route('wallet.index') }}">Wallet</a>
+                <a class="rounded-lg px-4 py-3 font-semibold hover:bg-white/10" href="{{ route('sponsor.referrals') }}">Sponsored users</a>
+                @can('viewQueue', App\Models\Withdrawal::class)
+                    <a class="rounded-lg px-4 py-3 font-semibold hover:bg-white/10" href="{{ route('staff.withdrawals.index') }}">Withdrawal queue</a>
+                @endcan
                 @if(auth()->user()->role === App\Enums\UserRole::Admin)<a class="rounded-lg px-4 py-3 font-semibold hover:bg-white/10" href="{{ route('admin.dashboard') }}">Administration</a>@endif
                 <a class="rounded-lg px-4 py-3 font-semibold hover:bg-white/10" href="{{ route('verification.index') }}">Identity verification</a>
                 @if(auth()->user()->providerProfile)
