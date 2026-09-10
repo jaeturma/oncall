@@ -12,16 +12,28 @@ use Illuminate\Support\Facades\DB;
 
 class ServiceRequestService
 {
+    public function __construct(private readonly Notifier $notifier) {}
+
     public function create(User $serviceFinder, ProviderProfile $providerProfile, array $attributes): ServiceRequest
     {
         unset($attributes['safety_acknowledged']);
 
-        return $serviceFinder->serviceRequests()->create([
+        $serviceRequest = $serviceFinder->serviceRequests()->create([
             ...$attributes,
             'requested_provider_id' => $providerProfile->user_id,
             'status' => ServiceRequestStatus::Requested,
             'safety_acknowledged_at' => now(),
         ]);
+
+        $this->notifier->push(
+            $providerProfile->user,
+            'service_request.received',
+            'New service request',
+            $serviceFinder->name.' requested "'.$serviceRequest->title.'".',
+            route('service-requests.show', $serviceRequest),
+        );
+
+        return $serviceRequest;
     }
 
     public function accept(ServiceRequest $serviceRequest, User $provider, string $agreedPrice): Job
@@ -41,6 +53,14 @@ class ServiceRequestService
             ]);
             $job->statusLogs()->create(['from_status' => null, 'to_status' => JobStatus::Accepted, 'changed_by' => $provider->id, 'notes' => 'Provider accepted the service request.']);
 
+            $this->notifier->push(
+                $lockedRequest->serviceFinder,
+                'service_request.accepted',
+                'Request accepted — booking confirmed',
+                $provider->name.' accepted "'.$lockedRequest->title.'" at PHP '.$agreedPrice.'.',
+                route('jobs.show', $job),
+            );
+
             return $job;
         });
     }
@@ -51,6 +71,14 @@ class ServiceRequestService
             $lockedRequest = ServiceRequest::whereKey($serviceRequest)->lockForUpdate()->firstOrFail();
             abort_unless($lockedRequest->status === ServiceRequestStatus::Requested && $lockedRequest->requested_provider_id === $provider->id, 409);
             $lockedRequest->update(['requested_provider_id' => null, 'status' => ServiceRequestStatus::Searching]);
+
+            $this->notifier->push(
+                $lockedRequest->serviceFinder,
+                'service_request.declined',
+                'Provider declined your request',
+                'Your request "'.$lockedRequest->title.'" is open again — you can request another provider.',
+                route('service-requests.show', $lockedRequest),
+            );
 
             return $lockedRequest;
         });

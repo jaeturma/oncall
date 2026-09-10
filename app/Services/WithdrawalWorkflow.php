@@ -20,7 +20,10 @@ use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
  */
 class WithdrawalWorkflow
 {
-    public function __construct(private readonly WalletLedger $ledger) {}
+    public function __construct(
+        private readonly WalletLedger $ledger,
+        private readonly Notifier $notifier,
+    ) {}
 
     public function request(User $user, string $amount, string $payoutMethod, string $payoutReference): Withdrawal
     {
@@ -84,6 +87,7 @@ class WithdrawalWorkflow
                     'notes' => $stamp,
                 ]);
                 $this->audit($actor, 'withdrawal.'.$decision.'ed', $locked, $before);
+                $this->notify($locked, $decision === 'reject' ? 'was rejected' : 'was returned for correction — the amount is back in your wallet');
 
                 return $locked;
             }
@@ -106,9 +110,23 @@ class WithdrawalWorkflow
             };
 
             $this->audit($actor, 'withdrawal.advanced', $locked, $before);
+            $this->notify($locked, $locked->status === WithdrawalStatus::Completed
+                ? 'has been disbursed'
+                : 'advanced to '.str($locked->status->value)->replace('_', ' ')->title());
 
             return $locked;
         });
+    }
+
+    private function notify(Withdrawal $withdrawal, string $phrase): void
+    {
+        $this->notifier->push(
+            $withdrawal->user,
+            'withdrawal.updated',
+            'Withdrawal update',
+            'Your PHP '.$withdrawal->amount.' withdrawal '.$phrase.'.',
+            route('withdrawals.index'),
+        );
     }
 
     public function cancel(Withdrawal $withdrawal, User $owner): Withdrawal

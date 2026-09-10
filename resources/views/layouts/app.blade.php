@@ -14,6 +14,11 @@
                 <p class="text-xs uppercase tracking-widest text-gold-300">Oncall dashboard</p>
             </div>
             <nav class="grid p-3" aria-label="Dashboard navigation">
+                @php($unreadNotifications = auth()->user()->unreadNotifications()->count())
+                <a class="flex items-center justify-between rounded-lg px-4 py-3 font-semibold hover:bg-white/10" href="{{ route('notifications.index') }}">
+                    Notifications
+                    @if($unreadNotifications > 0)<span class="rounded-full bg-gold-400 px-2 py-0.5 text-xs font-black text-navy-900">{{ $unreadNotifications }}</span>@endif
+                </a>
                 <a class="rounded-lg bg-gold-400 px-4 py-3 font-semibold text-navy-900" href="{{ route('provider.dashboard') }}">Provider dashboard</a>
                 @can('viewAny', App\Models\ServiceRequest::class)
                     <a class="rounded-lg px-4 py-3 font-semibold hover:bg-white/10" href="{{ route('service-requests.index') }}">Service requests</a>

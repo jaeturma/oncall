@@ -30,6 +30,7 @@ use App\Http\Controllers\JobController;
 use App\Http\Controllers\JobMessageController;
 use App\Http\Controllers\JobPaymentController;
 use App\Http\Controllers\JobStatusController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\Provider\AcceptedServiceRequestController;
 use App\Http\Controllers\Provider\AvailabilityController;
 use App\Http\Controllers\Provider\DeclinedServiceRequestController;
@@ -63,6 +64,9 @@ Route::middleware('guest')->group(function () {
 });
 Route::middleware(['auth', 'account.active'])->group(function () {
     Route::view('/dashboard', 'dashboard')->name('dashboard');
+    Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::patch('/notifications/read-all', [NotificationController::class, 'readAll'])->name('notifications.read-all');
+    Route::patch('/notifications/{notification}/read', [NotificationController::class, 'read'])->name('notifications.read');
     Route::post('/logout', LogoutController::class)->name('logout');
     Route::get('/admin/catalog', [ServiceCatalogController::class, 'index'])->name('admin.catalog');
     Route::get('/admin', AdminDashboardController::class)->name('admin.dashboard');

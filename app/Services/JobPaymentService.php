@@ -19,7 +19,10 @@ use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
  */
 class JobPaymentService
 {
-    public function __construct(private readonly WalletLedger $ledger) {}
+    public function __construct(
+        private readonly WalletLedger $ledger,
+        private readonly Notifier $notifier,
+    ) {}
 
     /** Called when a job is marked completed. Idempotent. */
     public function openFor(Job $job): JobPayment
@@ -62,6 +65,13 @@ class JobPaymentService
             ]);
 
             $this->audit($finder, 'job_payment.confirmed', $locked, $before);
+            $this->notifier->push(
+                $locked->provider,
+                'job_payment.confirmed',
+                'Payment confirmed by the Service Finder',
+                'PHP '.$locked->net_amount.' is pending Oncall release into your wallet.',
+                route('jobs.show', $locked->job_id),
+            );
 
             return $locked;
         });
@@ -85,6 +95,13 @@ class JobPaymentService
 
             $locked->update(['status' => JobPaymentStatus::Released, 'released_by' => $staff->id, 'released_at' => now()]);
             $this->audit($staff, 'job_payment.released', $locked, $before);
+            $this->notifier->push(
+                $locked->provider,
+                'job_payment.released',
+                'Job earning released to your wallet',
+                'PHP '.$locked->net_amount.' is now available to withdraw.',
+                route('wallet.index'),
+            );
 
             return $locked;
         });

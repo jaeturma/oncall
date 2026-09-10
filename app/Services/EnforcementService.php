@@ -15,6 +15,8 @@ use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 
 class EnforcementService
 {
+    public function __construct(private readonly Notifier $notifier) {}
+
     /** @param array<string, mixed> $attributes */
     public function apply(EnforcementCase $case, User $admin, array $attributes, ?string $ipAddress, ?string $userAgent): EnforcementCase
     {
@@ -58,6 +60,13 @@ class EnforcementService
             ]);
             $lockedCase->user()->update(['status' => $userStatus]);
             $this->audit($admin, 'enforcement.action_applied', $lockedCase, $before, $lockedCase->fresh()->toArray(), $ipAddress, $userAgent);
+            $this->notifier->push(
+                $lockedCase->user,
+                'enforcement.action_applied',
+                'Account action: '.str($targetAction->value)->replace('_', ' ')->title(),
+                'An admin applied a '.str($targetAction->value)->replace('_', ' ')->lower().' to your account. You can view the case and appeal.',
+                route('enforcement-cases.show', $lockedCase),
+            );
 
             return $lockedCase->fresh();
         });
@@ -99,6 +108,13 @@ class EnforcementService
             $before = $lockedCase->toArray();
             $lockedCase->update(['appeal_status' => $appealStatus, 'resolution' => $resolution, 'handled_by' => $admin->id]);
             $this->audit($admin, 'enforcement.appeal_reviewed', $lockedCase, $before, $lockedCase->fresh()->toArray(), $ipAddress, $userAgent);
+            $this->notifier->push(
+                $lockedCase->user,
+                'enforcement.appeal_reviewed',
+                'Appeal '.str($appealStatus->value)->replace('_', ' ')->lower(),
+                $resolution,
+                route('enforcement-cases.show', $lockedCase),
+            );
 
             return $lockedCase->fresh();
         });

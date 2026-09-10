@@ -18,7 +18,10 @@ use RuntimeException;
  */
 class CommissionEngine
 {
-    public function __construct(private readonly WalletLedger $ledger) {}
+    public function __construct(
+        private readonly WalletLedger $ledger,
+        private readonly Notifier $notifier,
+    ) {}
 
     /**
      * Trigger: a sponsored user's identity has been verified. Records the
@@ -102,6 +105,13 @@ class CommissionEngine
             }
 
             $this->audit($approver, 'commission.approved', $locked, $before);
+            $this->notifier->push(
+                $locked->sponsor,
+                'commission.approved',
+                'Sponsor commission released',
+                'PHP '.$locked->amount.' from '.$locked->sponsoredUser->name.' is now available in your wallet.',
+                route('wallet.index'),
+            );
 
             return $locked;
         });

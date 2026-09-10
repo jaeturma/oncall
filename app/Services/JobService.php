@@ -9,7 +9,10 @@ use Illuminate\Support\Facades\DB;
 
 class JobService
 {
-    public function __construct(private readonly JobPaymentService $jobPayments) {}
+    public function __construct(
+        private readonly JobPaymentService $jobPayments,
+        private readonly Notifier $notifier,
+    ) {}
 
     public function transition(Job $job, User $actor, JobStatus $targetStatus, ?string $notes): Job
     {
@@ -32,6 +35,15 @@ class JobService
                 $lockedJob->provider()->firstOrFail()->providerProfile()->increment('completed_jobs_cached');
                 $this->jobPayments->openFor($lockedJob);
             }
+
+            $recipientId = $actor->id === $lockedJob->service_finder_id ? $lockedJob->provider_id : $lockedJob->service_finder_id;
+            $this->notifier->push(
+                User::find($recipientId),
+                'job.status_changed',
+                'Booking updated: '.str($targetStatus->value)->replace('_', ' ')->title(),
+                $actor->name.' set the job to "'.str($targetStatus->value)->replace('_', ' ')->title().'".',
+                route('jobs.show', $lockedJob),
+            );
 
             return $lockedJob;
         });

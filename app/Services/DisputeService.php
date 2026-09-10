@@ -19,7 +19,10 @@ use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 
 class DisputeService
 {
-    public function __construct(private readonly JobPaymentService $jobPayments) {}
+    public function __construct(
+        private readonly JobPaymentService $jobPayments,
+        private readonly Notifier $notifier,
+    ) {}
 
     public function open(Job $job, User $raiser, DisputeCategory $category, string $description): Dispute
     {
@@ -48,6 +51,14 @@ class DisputeService
             $lockedJob->statusLogs()->create(['from_status' => $dispute->job_prior_status, 'to_status' => JobStatus::Disputed, 'changed_by' => $raiser->id, 'notes' => 'Dispute opened: '.$category->value]);
 
             $this->audit($raiser, 'dispute.opened', $dispute, null);
+
+            $this->notifier->push(
+                $dispute->againstUser,
+                'dispute.opened',
+                'A dispute was opened on your job',
+                $raiser->name.' opened a dispute. The job payment is frozen until an admin resolves it.',
+                route('jobs.show', $lockedJob),
+            );
 
             return $dispute;
         });
@@ -114,9 +125,23 @@ class DisputeService
             }
 
             $this->audit($admin, 'dispute.resolved', $locked, $before);
+            $this->notifyResolved($locked, str($status->value)->replace('_', ' ')->title());
 
             return $locked;
         });
+    }
+
+    private function notifyResolved(Dispute $dispute, string $outcome): void
+    {
+        foreach ([$dispute->job->service_finder_id, $dispute->job->provider_id] as $userId) {
+            $this->notifier->push(
+                User::find($userId),
+                'dispute.resolved',
+                'Dispute resolved: '.$outcome,
+                $dispute->resolution ?: 'An admin has closed the dispute on your job.',
+                route('jobs.show', $dispute->job_id),
+            );
+        }
     }
 
     private function uphold(Dispute $dispute, ?JobPayment $payment, User $admin): DisputeStatus

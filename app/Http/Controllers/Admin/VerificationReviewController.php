@@ -7,6 +7,7 @@ use App\Enums\VerificationStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ReviewVerificationRequest;
 use App\Models\ProviderDocument;
+use App\Services\Notifier;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -23,7 +24,7 @@ class VerificationReviewController extends Controller
         ]);
     }
 
-    public function update(ReviewVerificationRequest $request, ProviderDocument $providerDocument): RedirectResponse
+    public function update(ReviewVerificationRequest $request, ProviderDocument $providerDocument, Notifier $notifier): RedirectResponse
     {
         abort_unless($providerDocument->status === VerificationStatus::Submitted, 422);
         $status = $request->enum('status', VerificationStatus::class);
@@ -35,6 +36,16 @@ class VerificationReviewController extends Controller
             $providerDocument->user->update(['identity_verification_status' => $status]);
             $providerDocument->user->providerProfile?->update(['verification_status' => $status]);
         });
+
+        $notifier->push(
+            $providerDocument->user,
+            'verification.reviewed',
+            'Identity verification '.($status === VerificationStatus::Verified ? 'approved' : str($status->value)->lower()),
+            $status === VerificationStatus::Verified
+                ? 'Your identity is verified. A badge now appears on your profile.'
+                : 'Your latest document was not approved. Review the notes and submit again.',
+            route('verification.index'),
+        );
 
         return back()->with('status', 'Verification review saved.');
     }
