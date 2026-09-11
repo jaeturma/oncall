@@ -74,6 +74,39 @@ class ProviderSearchTest extends TestCase
         $response->assertOk()->assertViewHas('canRevealIdentity', true)->assertSeeInOrder([$availableProvider->name, $unavailableProvider->name]);
     }
 
+    public function test_nearest_available_provider_is_listed_first_and_shown_an_approximate_distance(): void
+    {
+        $province = Province::factory()->create(['latitude' => 10.0, 'longitude' => 123.0]);
+        $nearMunicipality = Municipality::factory()->for($province)->create(['name' => 'Near City', 'latitude' => 10.0, 'longitude' => 123.0]);
+        $farMunicipality = Municipality::factory()->for($province)->create(['name' => 'Far City', 'latitude' => 11.0, 'longitude' => 124.0]);
+        $service = Service::factory()->create();
+        $nearProvider = User::factory()->serviceProvider()->create(['name' => 'Near Provider']);
+        $farProvider = User::factory()->serviceProvider()->create(['name' => 'Far Provider']);
+        $this->searchableProfile($farProvider, $province, $farMunicipality, $service, ['available_now' => true, 'rating_cached' => 5]);
+        $this->searchableProfile($nearProvider, $province, $nearMunicipality, $service, ['available_now' => true, 'rating_cached' => 1]);
+        $viewer = User::factory()->identityVerified()->create(['role' => UserRole::ServiceFinder]);
+        ProviderDocument::factory()->for($viewer)->create(['status' => VerificationStatus::Verified, 'expires_at' => now()->addYear()]);
+
+        $response = $this->actingAs($viewer)->get(route('providers.search', ['help' => 'service:'.$service->id, 'province_id' => $province->id]));
+
+        $response->assertOk()->assertSeeInOrder([$nearProvider->name, $farProvider->name])
+            ->assertSee('0.0 km away')
+            ->assertSee('(approximate)');
+    }
+
+    public function test_provider_profile_shows_approximate_distance_when_arriving_from_search_results(): void
+    {
+        $province = Province::factory()->create(['latitude' => 10.0, 'longitude' => 123.0]);
+        $originMunicipality = Municipality::factory()->for($province)->create(['latitude' => 10.0, 'longitude' => 123.0]);
+        $providerMunicipality = Municipality::factory()->for($province)->create(['latitude' => 11.0, 'longitude' => 124.0]);
+        $service = Service::factory()->create();
+        $profile = $this->searchableProfile(User::factory()->serviceProvider()->create(), $province, $providerMunicipality, $service);
+
+        $response = $this->get(route('providers.show', $profile).'?from_province_id='.$province->id.'&from_municipality_id='.$originMunicipality->id);
+
+        $response->assertOk()->assertSee('km from your search location')->assertSee('approximate');
+    }
+
     public function test_broad_category_search_returns_matching_services_only(): void
     {
         $province = Province::factory()->create();

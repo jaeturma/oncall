@@ -14,11 +14,16 @@
                 <div><p class="text-sm font-bold uppercase tracking-widest text-navy-800">{{ $profile->available_now ? 'Available now' : 'Currently unavailable' }}</p><h2 class="mt-1 text-xl font-black">{{ $displayName }}</h2></div>
                 <span class="rounded-full bg-gold-100 px-3 py-1 text-xs font-bold text-navy-900">&#10003; Identity verified</span>
             </div>
-            <p class="mt-3 text-slate-600">Serving {{ $profile->municipality->name }}, {{ $profile->province->name }}</p>
+            <p class="mt-3 text-slate-600">
+                Serving {{ $profile->municipality->name }}, {{ $profile->province->name }}
+                @if($profile->distance_km !== null)
+                    <span class="text-slate-400">&middot;</span> ~{{ number_format($profile->distance_km, $profile->distance_km < 10 ? 1 : 0) }} km away <span class="text-xs text-slate-400">(approximate)</span>
+                @endif
+            </p>
             <div class="mt-4 flex flex-wrap gap-2">@foreach($profile->providerServices as $providerService)<span class="rounded-full bg-slate-100 px-3 py-1 text-sm font-semibold">{{ $providerService->service->name }}</span>@endforeach</div>
             <div class="mt-5 flex flex-wrap gap-4 text-sm text-slate-600"><span>Rating: {{ $profile->rating_cached ? number_format((float) $profile->rating_cached, 1) : 'New' }}</span><span>{{ $profile->completed_jobs_cached }} completed services</span></div>
             <div class="mt-5 flex flex-wrap gap-3">
-                <a class="inline-flex rounded-lg border border-navy-900 px-4 py-2 font-bold text-navy-900 hover:bg-navy-900 hover:text-white" href="{{ route('providers.show', $profile) }}">View provider</a>
+                <a class="inline-flex rounded-lg border border-navy-900 px-4 py-2 font-bold text-navy-900 hover:bg-navy-900 hover:text-white" href="{{ route('providers.show', $profile) }}?{{ http_build_query(['from_province_id' => request('province_id'), 'from_municipality_id' => request('municipality_id')]) }}">View provider</a>
                 @if($reveal)
                     <a class="inline-flex rounded-lg bg-gold-400 px-4 py-2 font-bold text-navy-900 hover:bg-gold-500" href="{{ route('service-requests.create', $profile) }}">Request service</a>
                 @endif

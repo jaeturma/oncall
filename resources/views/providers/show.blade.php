@@ -16,7 +16,11 @@
                     {{ $profile->available_now ? 'Available now' : 'Currently unavailable' }}
                 </span>
             </div>
-            <p class="mt-4 text-sm text-slate-400">Distance to you is not shown &mdash; Oncall does not yet collect reliable provider coordinates.</p>
+            @if($distanceKm !== null)
+                <p class="mt-4 text-sm text-slate-400">~{{ number_format($distanceKm, $distanceKm < 10 ? 1 : 0) }} km from your search location &mdash; approximate, based on municipality location, not live GPS.</p>
+            @else
+                <p class="mt-4 text-sm text-slate-400">Distance to you is not shown for this location yet.</p>
+            @endif
         </div>
     </section>
 

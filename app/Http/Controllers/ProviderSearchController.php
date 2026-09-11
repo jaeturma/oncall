@@ -21,7 +21,7 @@ class ProviderSearchController extends Controller
         $filters = $request->validated();
 
         return view('search.index', [
-            'providers' => $providerSearch->search($filters, $request->user()),
+            'providers' => $providerSearch->search($filters, $request->user(), $request),
             'canRevealIdentity' => $request->user()?->role === UserRole::ServiceFinder && $request->user()->isIdentityVerified(),
             'filters' => $filters,
             'categories' => ServiceCategory::query()->where('active', true)->with(['services' => fn ($query) => $query->where('active', true)->orderBy('name')])->orderBy('name')->get(),

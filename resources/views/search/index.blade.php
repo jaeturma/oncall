@@ -1,5 +1,5 @@
 <x-layouts.public title="Find local help">
-    <section class="border-b border-slate-200 bg-navy-900 px-6 py-12 text-white"><div class="mx-auto max-w-7xl"><p class="font-bold uppercase tracking-widest text-gold-300">Service Finder</p><h1 class="mt-2 text-4xl font-black">Find trusted local help</h1><p class="mt-3 text-slate-300">Available providers appear first. Distance is not shown because reliable coordinates are not yet collected.</p></div></section>
+    <section class="border-b border-slate-200 bg-navy-900 px-6 py-12 text-white"><div class="mx-auto max-w-7xl"><p class="font-bold uppercase tracking-widest text-gold-300">Service Finder</p><h1 class="mt-2 text-4xl font-black">Find trusted local help</h1><p class="mt-3 text-slate-300">Available providers appear first, then nearest. Distance is approximate, based on municipality location, not live GPS.</p></div></section>
     <div class="mx-auto max-w-7xl px-6 pt-8"><x-emergency-notice /></div>
     <main class="mx-auto grid max-w-7xl gap-8 px-6 py-10 lg:grid-cols-[20rem_1fr]">
         <aside class="self-start rounded-2xl bg-white p-5 shadow-sm"><h2 class="text-xl font-black">Refine results</h2><x-search-form class="mt-5 shadow-none" :categories="$categories" :provinces="$provinces" :services="$services" :municipalities="$municipalities" :filters="$filters" refine /></aside>
