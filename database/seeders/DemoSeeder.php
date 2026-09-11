@@ -6,13 +6,19 @@ use App\Enums\CommissionStatus;
 use App\Enums\CommissionType;
 use App\Enums\DisputeCategory;
 use App\Enums\DocumentType;
+use App\Enums\EnforcementCaseStatus;
 use App\Enums\JobStatus;
+use App\Enums\ReportCategory;
+use App\Enums\ReportStatus;
 use App\Enums\ServiceRequestStatus;
 use App\Enums\ServiceUrgency;
 use App\Enums\UserRole;
 use App\Enums\UserStatus;
 use App\Enums\VerificationStatus;
+use App\Enums\ViolationSeverity;
 use App\Models\AccountType;
+use App\Models\AuditLog;
+use App\Models\EnforcementCase;
 use App\Models\Job;
 use App\Models\Municipality;
 use App\Models\ProviderProfile;
@@ -57,7 +63,8 @@ class DemoSeeder extends Seeder
         $this->provider('arturo@oncall.ph', 'Arturo Mendoza', 'Carpenter', 'Tagum City', 'Davao del Norte', available: true, rating: 4.3, completed: 18, credentials: ['15 years finishing carpentry'], accountTypeSlug: 'verified-provider');
         $this->provider('marites@oncall.ph', 'Marites Lim', 'House Cleaning', 'Cebu City', 'Cebu', available: true, rating: 4.7, completed: 62, credentials: ['Bonded and background-checked'], accountTypeSlug: 'verified-provider');
 
-        // A provider that must NOT appear in search (identity not yet verified).
+        // A provider that must NOT appear in search (identity not yet verified,
+        // but has a document sitting in the admin verification queue).
         $unverified = $this->account('pending@oncall.ph', 'Unverified Applicant', UserRole::ServiceProvider, accountTypeSlug: 'verified-provider');
         ProviderProfile::query()->updateOrCreate(
             ['user_id' => $unverified->id],
@@ -72,9 +79,15 @@ class DemoSeeder extends Seeder
                 'completed_jobs_cached' => 0,
             ],
         );
+        $unverified->providerDocuments()->updateOrCreate(
+            ['document_type' => DocumentType::DriversLicense],
+            ['private_path' => 'verification-documents/demo-'.$unverified->id.'.pdf', 'status' => VerificationStatus::Submitted],
+        );
 
         $this->demoJobAndEarning();
         $this->demoFinance();
+        $this->demoOpenRequests();
+        $this->demoSafetyReport();
     }
 
     /**
@@ -305,6 +318,81 @@ class DemoSeeder extends Seeder
         if (bccomp($available, '30', 2) >= 0) {
             app(WithdrawalWorkflow::class)->request($sponsor, '30.00', 'GCash', 'GCash 0917 000 0002');
         }
+    }
+
+    /**
+     * A still-pending request (provider dashboard "incoming") and a
+     * cancelled one (customer dashboard history), so both sides of the
+     * booking flow have more than one state to look at.
+     */
+    private function demoOpenRequests(): void
+    {
+        $finder = User::query()->where('email', 'customer@oncall.ph')->first();
+        $marites = User::query()->where('email', 'marites@oncall.ph')->first();
+        $noel = User::query()->where('email', 'noel@oncall.ph')->first();
+        if ($finder === null || $marites === null || $noel === null || ServiceRequest::query()->where('service_finder_id', $finder->id)->where('requested_provider_id', $marites->id)->exists()) {
+            return;
+        }
+
+        $maritesProfile = $marites->providerProfile;
+        ServiceRequest::create([
+            'service_finder_id' => $finder->id,
+            'requested_provider_id' => $marites->id,
+            'service_id' => Service::query()->where('name', 'House Cleaning')->sole()->id,
+            'province_id' => $maritesProfile->province_id,
+            'municipality_id' => $maritesProfile->municipality_id,
+            'title' => 'Full house deep cleaning',
+            'description' => 'Two-bedroom condo, moving out end of the month.',
+            'urgency' => ServiceUrgency::Scheduled,
+            'needed_at' => now()->addDays(4),
+            'budget_min' => 1000,
+            'budget_max' => 1800,
+            'status' => ServiceRequestStatus::Requested,
+        ]);
+
+        $noelProfile = $noel->providerProfile;
+        ServiceRequest::create([
+            'service_finder_id' => $finder->id,
+            'requested_provider_id' => $noel->id,
+            'service_id' => Service::query()->where('name', 'Auto Mechanic')->sole()->id,
+            'province_id' => $noelProfile->province_id,
+            'municipality_id' => $noelProfile->municipality_id,
+            'title' => 'Car will not start',
+            'description' => 'Found another mechanic sooner.',
+            'urgency' => ServiceUrgency::Immediate,
+            'status' => ServiceRequestStatus::Cancelled,
+        ]);
+    }
+
+    /**
+     * An off-platform-conduct report that opens an enforcement case, so the
+     * admin enforcement queue has an untouched case alongside the disputed
+     * job (which already has its own case via the dispute flow).
+     */
+    private function demoSafetyReport(): void
+    {
+        $finder = User::query()->where('email', 'customer@oncall.ph')->first();
+        $ramon = User::query()->where('email', 'ramon@oncall.ph')->first();
+        if ($finder === null || $ramon === null || $finder->reportsMade()->exists()) {
+            return;
+        }
+
+        $report = $finder->reportsMade()->create([
+            'reported_user_id' => $ramon->id,
+            'category' => ReportCategory::OffPlatformContact,
+            'description' => 'Asked to be paid directly via personal GCash instead of through Oncall.',
+            'status' => ReportStatus::Submitted,
+        ]);
+
+        $case = EnforcementCase::create([
+            'user_id' => $ramon->id,
+            'related_report_id' => $report->id,
+            'violation_category' => $report->category,
+            'severity' => ViolationSeverity::Moderate,
+            'status' => EnforcementCaseStatus::Open,
+        ]);
+
+        AuditLog::create(['actor_id' => $finder->id, 'event' => 'safety.report_submitted', 'subject_type' => EnforcementCase::class, 'subject_id' => $case->id, 'before_json' => null, 'after_json' => $case->toArray()]);
     }
 
     private function municipality(string $name, string $provinceName): Municipality
