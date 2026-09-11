@@ -33,3 +33,37 @@
 
     --color-oncall: #ffce10;
 }
+
+@layer base {
+    button,
+    input[type='submit'],
+    a {
+        transition:
+            background-color 150ms ease,
+            border-color 150ms ease,
+            box-shadow 150ms ease,
+            transform 100ms ease,
+            opacity 150ms ease;
+    }
+
+    button:not(:disabled):active,
+    input[type='submit']:not(:disabled):active {
+        transform: scale(0.97);
+    }
+
+    button:disabled,
+    input[type='submit']:disabled {
+        cursor: not-allowed;
+        opacity: 0.7;
+        transform: none;
+    }
+
+    button:focus-visible,
+    input:focus-visible,
+    select:focus-visible,
+    textarea:focus-visible,
+    a:focus-visible {
+        outline: 2px solid var(--color-gold-500);
+        outline-offset: 2px;
+    }
+}
