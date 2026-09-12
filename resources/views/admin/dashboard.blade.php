@@ -1,18 +1,31 @@
-<x-layouts.admin title="Administration dashboard">
+<x-layouts.admin title="Administration overview" description="Live counts from the platform. Click any card to open its queue.">
     <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        @foreach(['users' => ['Users', 'admin.users.index'], 'providers' => ['Providers', 'admin.providers.index'], 'services' => ['Active services', 'admin.catalog'], 'active_jobs' => ['Active jobs', 'admin.jobs.index'], 'pending_verifications' => ['Pending verification', 'admin.verifications.index'], 'open_reports' => ['Open reports', 'admin.reports.index'], 'open_enforcement' => ['Enforcement cases', 'admin.enforcement.index'], 'audit_events' => ['Audit events', 'admin.audit-logs.index']] as $key => [$label, $route])
-            <a class="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200 hover:ring-gold-400" href="{{ route($route) }}"><p class="text-sm font-bold uppercase tracking-widest text-navy-800">{{ $label }}</p><p class="mt-3 text-4xl font-black">{{ $metrics[$key] }}</p></a>
-        @endforeach
+        <x-ui.stat-card label="Pending verifications" :value="$metrics['pending_verifications']" icon="identification" tone="warning" :href="route('admin.verifications.index')" />
+        <x-ui.stat-card label="Active jobs" :value="$metrics['active_jobs']" icon="briefcase" tone="brand" :href="route('admin.jobs.index')" />
+        <x-ui.stat-card label="Open reports" :value="$metrics['open_reports']" icon="flag" tone="danger" :href="route('admin.reports.index')" />
+        <x-ui.stat-card label="Enforcement cases" :value="$metrics['open_enforcement']" icon="scale" tone="danger" :href="route('admin.enforcement.index')" />
+        <x-ui.stat-card label="Users" :value="$metrics['users']" icon="users" :href="route('admin.users.index')" />
+        <x-ui.stat-card label="Providers" :value="$metrics['providers']" icon="user" :href="route('admin.providers.index')" />
+        <x-ui.stat-card label="Active services" :value="$metrics['services']" icon="squares" :href="route('admin.catalog')" />
+        <x-ui.stat-card label="Audit events" :value="$metrics['audit_events']" icon="clipboard" :href="route('admin.audit-logs.index')" />
     </div>
-    <section class="mt-8 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
-        <h2 class="text-xl font-black">Finance, disputes &amp; sponsorship</h2>
-        <div class="mt-4 grid gap-4 md:grid-cols-3">
-            <a class="rounded-xl bg-slate-50 p-4 hover:bg-gold-50" href="{{ route('admin.finance.index') }}"><p class="font-bold">Finance reports</p><p class="mt-1 text-sm text-slate-600">Reconciliation, revenue, pipelines, ledger movement, CSV.</p></a>
-            <a class="rounded-xl bg-slate-50 p-4 hover:bg-gold-50" href="{{ route('admin.disputes.index') }}"><p class="font-bold">Disputes</p><p class="mt-1 text-sm text-slate-600">Resolve job disputes; payments stay frozen until you do.</p></a>
-            <a class="rounded-xl bg-slate-50 p-4 hover:bg-gold-50" href="{{ route('admin.account-types.index') }}"><p class="font-bold">Account types</p><p class="mt-1 text-sm text-slate-600">Registration fees, sponsor &amp; platform commission rules.</p></a>
-            <a class="rounded-xl bg-slate-50 p-4 hover:bg-gold-50" href="{{ route('admin.commissions.index') }}"><p class="font-bold">Sponsor commissions</p><p class="mt-1 text-sm text-slate-600">Approve or reverse posted commissions.</p></a>
-            <a class="rounded-xl bg-slate-50 p-4 hover:bg-gold-50" href="{{ route('staff.withdrawals.index') }}"><p class="font-bold">Withdrawal queue</p><p class="mt-1 text-sm text-slate-600">Accounting &rarr; Budget &rarr; Cashier disbursement.</p></a>
-            <a class="rounded-xl bg-slate-50 p-4 hover:bg-gold-50" href="{{ route('staff.job-payments.index') }}"><p class="font-bold">Job payments</p><p class="mt-1 text-sm text-slate-600">Release completed-job earnings into provider wallets.</p></a>
+
+    <section class="mt-8">
+        <h2 class="h3">Finance, disputes &amp; sponsorship</h2>
+        <div class="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            @foreach([
+                ['route' => 'admin.finance.index', 'icon' => 'chart', 'title' => 'Finance reports', 'text' => 'Reconciliation, revenue, pipelines, ledger movement, CSV export.'],
+                ['route' => 'admin.disputes.index', 'icon' => 'scale', 'title' => 'Disputes', 'text' => 'Resolve job disputes; payments stay frozen until you do.'],
+                ['route' => 'admin.account-types.index', 'icon' => 'cog', 'title' => 'Account types', 'text' => 'Registration fees, sponsor and platform commission rules.'],
+                ['route' => 'admin.commissions.index', 'icon' => 'banknotes', 'title' => 'Sponsor commissions', 'text' => 'Approve or reverse posted commissions.'],
+                ['route' => 'staff.withdrawals.index', 'icon' => 'arrow-path', 'title' => 'Withdrawal queue', 'text' => 'Accounting, Budget, and Cashier disbursement steps.'],
+                ['route' => 'staff.job-payments.index', 'icon' => 'document-check', 'title' => 'Job payments', 'text' => 'Release completed-job earnings into provider wallets.'],
+            ] as $link)
+                <a class="card card-interactive flex items-start gap-4 p-5" href="{{ route($link['route']) }}">
+                    <span class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-navy-50 text-navy-800"><x-ui.icon :name="$link['icon']" class="size-5" /></span>
+                    <span class="min-w-0"><span class="block font-semibold text-ink">{{ $link['title'] }}</span><span class="mt-0.5 block text-sm text-ink-secondary">{{ $link['text'] }}</span></span>
+                </a>
+            @endforeach
         </div>
     </section>
 </x-layouts.admin>

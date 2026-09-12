@@ -31,6 +31,9 @@ class SearchProvidersRequest extends FormRequest
             'province_id' => ['required', 'integer', 'exists:provinces,id'],
             'service_id' => ['nullable', 'integer', Rule::exists('services', 'id')->where('active', true)],
             'municipality_id' => ['nullable', 'integer', Rule::exists('municipalities', 'id')->where('province_id', $this->integer('province_id'))],
+            'available_only' => ['nullable', 'boolean'],
+            'min_rating' => ['nullable', 'integer', 'min:1', 'max:5'],
+            'sort' => ['nullable', 'string', 'in:recommended,rating,nearest'],
         ];
     }
 

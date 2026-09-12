@@ -59,4 +59,9 @@ class UserFactory extends Factory
     {
         return $this->state(fn (array $attributes): array => ['identity_verification_status' => VerificationStatus::Verified]);
     }
+
+    public function mobileVerified(): static
+    {
+        return $this->state(fn (array $attributes): array => ['phone' => '09'.fake()->numerify('#########'), 'phone_verified_at' => now()]);
+    }
 }

@@ -1,34 +1,37 @@
-<x-layouts.app title="Sponsored users">
+<x-layouts.app title="Sponsored users" eyebrow="Sponsorship" description="People who registered with your email as their sponsor. Sponsorship is single level — you earn only from users you directly sponsored, once their identity is verified.">
     <div class="grid gap-6">
-        <div><p class="font-bold uppercase tracking-widest text-navy-800">Sponsor</p><h1 class="text-3xl font-black">People you sponsored</h1><p class="mt-2 text-slate-600">Sponsorship is single level &mdash; you earn only from users you directly sponsored.</p></div>
-
         <div class="grid gap-4 sm:grid-cols-3">
-            <div class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200"><p class="text-sm text-slate-500">Sponsored users</p><p class="mt-1 text-2xl font-black">{{ $totals['count'] }}</p></div>
-            <div class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200"><p class="text-sm text-slate-500">Commission available</p><p class="mt-1 text-2xl font-black">PHP {{ number_format((float) $totals['available'], 2) }}</p></div>
-            <div class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200"><p class="text-sm text-slate-500">Commission pending</p><p class="mt-1 text-2xl font-black text-slate-500">PHP {{ number_format((float) $totals['pending'], 2) }}</p></div>
+            <x-ui.stat-card label="Sponsored users" :value="$totals['count']" icon="users" />
+            <x-ui.stat-card label="Commission available" :value="'₱'.number_format((float) $totals['available'], 2)" hint="In your wallet" icon="wallet" tone="accent" :href="route('wallet.index')" />
+            <x-ui.stat-card label="Commission pending" :value="'₱'.number_format((float) $totals['pending'], 2)" hint="Awaiting Oncall approval" icon="clock" />
         </div>
 
-        <section class="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200">
-            <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-slate-200 text-left text-sm">
-                    <thead class="bg-slate-50"><tr><th class="px-6 py-3">User</th><th class="px-6 py-3">Account type</th><th class="px-6 py-3">Joined</th><th class="px-6 py-3">Identity</th><th class="px-6 py-3">Commission</th></tr></thead>
-                    <tbody class="divide-y divide-slate-100">
-                        @forelse($sponsored as $user)
-                            @php($commission = $commissionByUser[$user->id] ?? null)
-                            <tr>
-                                <td class="px-6 py-4 font-semibold">{{ $user->name }}</td>
-                                <td class="px-6 py-4 text-slate-600">{{ $user->accountType?->name ?? '—' }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap">{{ $user->created_at->format('M j, Y') }}</td>
-                                <td class="px-6 py-4">{{ str($user->identity_verification_status->value)->title() }}</td>
-                                <td class="px-6 py-4">{{ $commission ? 'PHP '.number_format((float) $commission->amount, 2).' · '.str($commission->status->value)->title() : '—' }}</td>
-                            </tr>
-                        @empty
-                            <tr><td class="px-6 py-8 text-center text-slate-500" colspan="5">You have not sponsored anyone yet.</td></tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
+        <section class="card">
+            @if($sponsored->isEmpty())
+                <div class="px-5 py-10 text-center sm:px-6">
+                    <p class="font-medium text-ink">No sponsored users yet</p>
+                    <p class="mt-1 text-sm text-ink-secondary">You have not sponsored anyone yet. Users who register through your sponsorship will appear here. Share your account email with people you refer; they enter it as their sponsor when signing up.</p>
+                </div>
+            @else
+                <div class="table-wrap">
+                    <table class="table">
+                        <thead><tr><th>User</th><th>Account type</th><th>Joined</th><th>Identity</th><th>Commission</th></tr></thead>
+                        <tbody>
+                            @foreach($sponsored as $user)
+                                @php($commission = $commissionByUser[$user->id] ?? null)
+                                <tr>
+                                    <td class="font-semibold whitespace-nowrap">{{ $user->name }}</td>
+                                    <td class="text-ink-secondary">{{ $user->accountType?->name ?? '—' }}</td>
+                                    <td class="whitespace-nowrap">{{ $user->created_at->format('M j, Y') }}</td>
+                                    <td><x-ui.status-badge :status="$user->identity_verification_status" /></td>
+                                    <td class="whitespace-nowrap">@if($commission)<span class="font-semibold tabular-nums">₱{{ number_format((float) $commission->amount, 2) }}</span> <x-ui.status-badge :status="$commission->status" class="ml-1" />@else<span class="text-ink-muted">—</span>@endif</td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            @endif
         </section>
-        <div>{{ $sponsored->links() }}</div>
+        @if($sponsored->hasPages())<div>{{ $sponsored->links() }}</div>@endif
     </div>
 </x-layouts.app>

@@ -7,8 +7,8 @@ use App\Enums\UserRole;
 use App\Enums\UserStatus;
 use App\Enums\VerificationStatus;
 use App\Observers\UserObserver;
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Database\Factories\UserFactory;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
@@ -19,11 +19,12 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Collection;
 
 #[Fillable(['name', 'email', 'phone', 'password', 'role', 'status', 'identity_verification_status', 'sponsor_user_id', 'account_type_id', 'rating_cached', 'reviews_count'])]
 #[Hidden(['password', 'remember_token'])]
 #[ObservedBy([UserObserver::class])]
-class User extends Authenticatable
+class User extends Authenticatable implements MustVerifyEmail
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
@@ -144,6 +145,42 @@ class User extends Authenticatable
     public function canRequestService(): bool
     {
         return ! config('oncall.service_requests.require_identity_verification') || $this->isIdentityVerified();
+    }
+
+    public function isMobileVerified(): bool
+    {
+        return $this->phone_verified_at !== null;
+    }
+
+    /**
+     * Whether email/mobile is verified, per user id, without ever loading a
+     * name, email address, or phone number. Safe to use when rendering
+     * provider results for guests, who must never receive contact details.
+     *
+     * @param  list<int>  $userIds
+     * @return Collection<int, array{mobile: bool, email: bool}>
+     */
+    public static function contactVerificationByIds(array $userIds): Collection
+    {
+        if ($userIds === []) {
+            return collect();
+        }
+
+        return static::query()
+            ->whereIn('id', $userIds)
+            ->get(['id', 'phone_verified_at', 'email_verified_at'])
+            ->keyBy('id')
+            ->map(fn (self $user): array => ['mobile' => $user->isMobileVerified(), 'email' => $user->hasVerifiedEmail()]);
+    }
+
+    /** Unread booking messages across every job this user is a party to, for the header/inbox badge. */
+    public function unreadJobMessagesCount(): int
+    {
+        return JobMessage::query()
+            ->whereNull('read_at')
+            ->where('sender_id', '!=', $this->id)
+            ->whereHas('job', fn ($query) => $query->where('service_finder_id', $this->id)->orWhere('provider_id', $this->id))
+            ->count();
     }
 
     /**

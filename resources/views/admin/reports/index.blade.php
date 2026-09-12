@@ -1,1 +1,24 @@
-<x-layouts.admin title="Safety reports"><div class="grid gap-4">@forelse($reports as $report)<article class="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200"><div class="flex flex-wrap justify-between gap-3"><p class="font-black">{{ $report->reporter->name }} reported {{ $report->reportedUser->name }}</p><span class="font-bold">{{ str($report->status->value)->replace('_', ' ')->title() }}</span></div><p class="mt-2 text-sm font-bold text-red-700">{{ str($report->category->value)->replace('_', ' ')->title() }}</p><p class="mt-3 whitespace-pre-line text-slate-700">{{ $report->description }}</p>@if($report->enforcementCase)<a class="mt-4 inline-flex font-bold text-navy-800" href="{{ route('admin.enforcement.show', $report->enforcementCase) }}">Open enforcement review →</a>@endif</article>@empty<p>No reports.</p>@endforelse {{ $reports->links() }}</div></x-layouts.admin>
+<x-layouts.admin title="Safety reports" description="Reports submitted from bookings. Each open report links to its enforcement review.">
+    @if($reports->isEmpty())
+        <x-empty-state icon="flag" title="No safety reports" message="Reports submitted by users will appear here for review." />
+    @else
+        <div class="grid gap-4">
+            @foreach($reports as $report)
+                <article class="card card-pad">
+                    <div class="flex flex-wrap items-start justify-between gap-3">
+                        <div class="min-w-0">
+                            <p class="font-semibold text-ink">{{ $report->reporter->name }} <span class="font-normal text-ink-muted">reported</span> {{ $report->reportedUser->name }}</p>
+                            <p class="mt-1 flex flex-wrap items-center gap-2 text-sm"><span class="badge badge-danger">{{ str($report->category->value)->replace('_', ' ')->lower()->ucfirst() }}</span><span class="text-ink-muted">{{ $report->created_at->diffForHumans() }}</span></p>
+                        </div>
+                        <x-ui.status-badge :status="$report->status" />
+                    </div>
+                    <p class="mt-3 whitespace-pre-line rounded-lg bg-surface-muted p-3 text-sm text-ink">{{ $report->description }}</p>
+                    @if($report->enforcementCase)
+                        <a class="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-navy-800 hover:underline" href="{{ route('admin.enforcement.show', $report->enforcementCase) }}">Open enforcement review <x-ui.icon name="arrow-right" class="size-4" /></a>
+                    @endif
+                </article>
+            @endforeach
+        </div>
+        @if($reports->hasPages())<div class="mt-5">{{ $reports->links() }}</div>@endif
+    @endif
+</x-layouts.admin>

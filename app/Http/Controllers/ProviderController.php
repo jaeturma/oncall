@@ -4,10 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Enums\UserRole;
 use App\Models\Municipality;
+use App\Models\ProviderDocument;
 use App\Models\ProviderProfile;
 use App\Models\Province;
 use App\Models\Review;
 use App\Models\ServiceRequest;
+use App\Models\User;
 use App\Services\DistanceEstimator;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -38,6 +40,10 @@ class ProviderController extends Controller
         ]);
 
         $distanceKm = $this->distanceFromSearchOrigin($request, $providerProfile, $distanceEstimator);
+        $providerProfile->verified_document_types = ProviderDocument::verifiedTypesByUser([$providerProfile->user_id])->get($providerProfile->user_id, []);
+        $contactVerification = User::contactVerificationByIds([$providerProfile->user_id])->get($providerProfile->user_id);
+        $providerProfile->mobile_verified = $contactVerification['mobile'] ?? false;
+        $providerProfile->email_verified = $contactVerification['email'] ?? false;
 
         if ($reveal) {
             $providerProfile->load('user:id,name');

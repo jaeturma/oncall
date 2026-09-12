@@ -1,36 +1,76 @@
-<x-layouts.app title="Service request">
-    <x-flash class="mb-5" />
-    <article class="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200 sm:p-8">
-        <div class="flex flex-wrap items-start justify-between gap-3">
-            <div><p class="text-sm font-bold uppercase tracking-widest text-navy-800">{{ $serviceRequest->service->name }}</p><h2 class="mt-2 text-2xl font-black">{{ $serviceRequest->title }}</h2></div>
-            <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold">{{ str($serviceRequest->status->value)->replace('_', ' ')->title() }}</span>
-        </div>
-        <dl class="mt-6 grid gap-4 text-sm sm:grid-cols-2">
-            <div><dt class="font-bold">Location</dt><dd class="text-slate-600">{{ $serviceRequest->municipality?->name }}, {{ $serviceRequest->province->name }}</dd></div>
-            <div><dt class="font-bold">Urgency</dt><dd class="text-slate-600">{{ str($serviceRequest->urgency->value)->replace('_', ' ')->title() }}</dd></div>
-            <div><dt class="font-bold">Requested by</dt><dd class="text-slate-600">{{ $serviceRequest->serviceFinder->name }}@if($serviceRequest->serviceFinder->rating_cached) &middot; &#9733; {{ number_format((float) $serviceRequest->serviceFinder->rating_cached, 1) }} ({{ $serviceRequest->serviceFinder->reviews_count }})@else &middot; no ratings yet @endif</dd></div>
-            @if($serviceRequest->needed_at)<div><dt class="font-bold">Needed at</dt><dd class="text-slate-600">{{ $serviceRequest->needed_at->format('M j, Y g:i A') }}</dd></div>@endif
-            @if($serviceRequest->budget_min || $serviceRequest->budget_max)<div><dt class="font-bold">Budget</dt><dd class="text-slate-600">PHP {{ $serviceRequest->budget_min ?? '0.00' }} – {{ $serviceRequest->budget_max ?? 'Open' }}</dd></div>@endif
-        </dl>
-        @if($serviceRequest->description)<div class="mt-6"><h3 class="font-bold">Description</h3><p class="mt-2 whitespace-pre-line text-slate-700">{{ $serviceRequest->description }}</p></div>@endif
-        <div class="mt-8 flex flex-wrap gap-3">
+@php
+    $isFinder = auth()->id() === $serviceRequest->service_finder_id;
+    $peso = fn ($amount): string => '₱'.number_format((float) $amount, 2);
+@endphp
+
+<x-layouts.app :title="$serviceRequest->title" :eyebrow="$serviceRequest->service->name">
+    <x-slot:actions><x-ui.status-badge :status="$serviceRequest->status" class="px-3 py-1.5 text-sm" /></x-slot:actions>
+
+    <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_18rem]">
+        <div class="grid content-start gap-6">
+            <section class="card card-pad">
+                <h2 class="h3">Request details</h2>
+                <dl class="mt-4 grid gap-4 text-sm sm:grid-cols-2">
+                    <div><dt class="text-ink-muted">Location</dt><dd class="mt-0.5 font-medium text-ink">{{ $serviceRequest->municipality?->name }}, {{ $serviceRequest->province->name }}</dd></div>
+                    <div><dt class="text-ink-muted">How soon</dt><dd class="mt-0.5 font-medium text-ink">{{ match ($serviceRequest->urgency) { App\Enums\ServiceUrgency::Immediate => 'As soon as possible', App\Enums\ServiceUrgency::SameDay => 'Today', App\Enums\ServiceUrgency::Scheduled => 'On a specific date' } }}</dd></div>
+                    @if($serviceRequest->needed_at)<div><dt class="text-ink-muted">Needed on</dt><dd class="mt-0.5 font-medium text-ink">{{ $serviceRequest->needed_at->format('D, M j, Y · g:i A') }}</dd></div>@endif
+                    @if($serviceRequest->budget_min || $serviceRequest->budget_max)<div><dt class="text-ink-muted">Budget</dt><dd class="mt-0.5 font-medium text-ink tabular-nums">{{ $serviceRequest->budget_min ? $peso($serviceRequest->budget_min) : '₱0.00' }} &ndash; {{ $serviceRequest->budget_max ? $peso($serviceRequest->budget_max) : 'Open' }}</dd></div>@endif
+                    <div><dt class="text-ink-muted">Sent</dt><dd class="mt-0.5 font-medium text-ink">{{ $serviceRequest->created_at->format('M j, Y · g:i A') }}</dd></div>
+                </dl>
+                @if($serviceRequest->description)
+                    <div class="mt-5 border-t border-line pt-5">
+                        <h3 class="text-sm font-semibold text-ink">Description</h3>
+                        <p class="mt-1.5 whitespace-pre-line text-ink-secondary">{{ $serviceRequest->description }}</p>
+                    </div>
+                @endif
+            </section>
+
             @can('respond', $serviceRequest)
-                <form class="flex flex-wrap items-end gap-3" method="POST" action="{{ route('service-requests.accept', $serviceRequest) }}">
-                    @csrf @method('PATCH')
-                    <label class="grid gap-1 font-semibold">Agreed price
-                        <input class="rounded-lg border-slate-300" type="number" name="agreed_price" min="0.01" step="0.01" value="{{ old('agreed_price', $serviceRequest->budget_max) }}" required>
-                        @error('agreed_price')<span class="text-sm text-red-700">{{ $message }}</span>@enderror
-                    </label>
-                    <button class="rounded-lg bg-navy-900 px-5 py-3 font-bold text-white" type="submit">Accept and confirm booking</button>
-                </form>
-                <form method="POST" action="{{ route('service-requests.decline', $serviceRequest) }}">@csrf @method('PATCH')<button class="rounded-lg border border-slate-300 px-5 py-3 font-bold" type="submit">Decline</button></form>
+                <section class="card card-pad ring-gold-300">
+                    <h2 class="h3">Respond to this request</h2>
+                    <p class="mt-1 text-sm text-ink-secondary">Accepting confirms the booking, shares contact details with the customer, and records the agreed price.</p>
+                    <form class="mt-5 grid gap-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end" method="POST" action="{{ route('service-requests.accept', $serviceRequest) }}">
+                        @csrf @method('PATCH')
+                        <x-form.input name="agreed_price" type="number" label="Agreed price (₱)" min="0.01" step="0.01" inputmode="decimal" :value="$serviceRequest->budget_max" required />
+                        <x-ui.button variant="primary" size="lg" data-loading-text="Confirming…">Accept and confirm booking</x-ui.button>
+                    </form>
+                    <form class="mt-3" method="POST" action="{{ route('service-requests.decline', $serviceRequest) }}">
+                        @csrf @method('PATCH')
+                        <x-ui.button variant="ghost" size="sm" data-loading-text="Declining…">Decline this request</x-ui.button>
+                    </form>
+                </section>
             @endcan
+
             @if($serviceRequest->job)
-                <a class="rounded-lg bg-navy-900 px-5 py-3 font-bold text-white" href="{{ route('jobs.show', $serviceRequest->job) }}">View confirmed booking</a>
+                <x-ui.alert tone="success" title="This request is now a confirmed booking">
+                    Contact details, messages, and status updates live on the booking record.
+                    <a class="mt-2 inline-flex items-center gap-1 font-semibold underline" href="{{ route('jobs.show', $serviceRequest->job) }}">Open booking <x-ui.icon name="arrow-right" class="size-4" /></a>
+                </x-ui.alert>
             @endif
-            @can('cancel', $serviceRequest)
-                <form method="POST" action="{{ route('service-requests.cancel', $serviceRequest) }}">@csrf @method('PATCH')<button class="rounded-lg border border-red-300 px-5 py-3 font-bold text-red-700" type="submit">Cancel request</button></form>
-            @endcan
+
+            <x-safety-notice variant="compact" />
         </div>
-    </article>
+
+        <aside class="grid content-start gap-4">
+            <div class="card card-pad">
+                <p class="eyebrow text-navy-700">{{ $isFinder ? 'Provider' : 'Requested by' }}</p>
+                @php($party = $isFinder ? $serviceRequest->requestedProvider : $serviceRequest->serviceFinder)
+                <div class="mt-3 flex items-center gap-3">
+                    <x-ui.avatar :name="$party->name" size="md" />
+                    <div class="min-w-0">
+                        <p class="truncate font-semibold text-ink">{{ $party->name }}</p>
+                        <x-ui.rating :value="$party->rating_cached" :count="$party->reviews_count" />
+                    </div>
+                </div>
+                <p class="mt-3 text-xs text-ink-muted">Phone and email are shared only after the booking is confirmed.</p>
+            </div>
+
+            @can('cancel', $serviceRequest)
+                <form method="POST" action="{{ route('service-requests.cancel', $serviceRequest) }}">
+                    @csrf @method('PATCH')
+                    <x-ui.button variant="danger" block data-loading-text="Cancelling…">Cancel request</x-ui.button>
+                </form>
+            @endcan
+        </aside>
+    </div>
 </x-layouts.app>

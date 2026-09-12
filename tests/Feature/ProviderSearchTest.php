@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\AvailabilityStatus;
 use App\Enums\UserRole;
 use App\Enums\UserStatus;
 use App\Enums\VerificationStatus;
@@ -160,6 +161,53 @@ class ProviderSearchTest extends TestCase
         $response = $this->get(route('providers.search', ['help' => 'service:'.$service->id, 'province_id' => $province->id]));
 
         $response->assertOk()->assertSee('1 provider found');
+    }
+
+    public function test_available_only_filter_excludes_busy_and_offline_providers(): void
+    {
+        $province = Province::factory()->create();
+        $municipality = Municipality::factory()->for($province)->create();
+        $service = Service::factory()->create();
+        $available = User::factory()->serviceProvider()->create(['name' => 'Available Provider']);
+        $busy = User::factory()->serviceProvider()->create(['name' => 'Busy Provider']);
+        $this->searchableProfile($available, $province, $municipality, $service, ['availability_status' => AvailabilityStatus::Available, 'available_now' => true]);
+        $this->searchableProfile($busy, $province, $municipality, $service, ['availability_status' => AvailabilityStatus::Busy, 'available_now' => false]);
+
+        $response = $this->get(route('providers.search', ['help' => 'service:'.$service->id, 'province_id' => $province->id, 'available_only' => 1]));
+
+        $response->assertOk()->assertSee('1 provider found');
+    }
+
+    public function test_minimum_rating_filter_excludes_lower_rated_providers(): void
+    {
+        $province = Province::factory()->create();
+        $municipality = Municipality::factory()->for($province)->create();
+        $service = Service::factory()->create();
+        $highRated = User::factory()->serviceProvider()->create(['name' => 'High Rated Provider']);
+        $lowRated = User::factory()->serviceProvider()->create(['name' => 'Low Rated Provider']);
+        $this->searchableProfile($highRated, $province, $municipality, $service, ['rating_cached' => 4.8]);
+        $this->searchableProfile($lowRated, $province, $municipality, $service, ['rating_cached' => 2.5]);
+
+        $response = $this->get(route('providers.search', ['help' => 'service:'.$service->id, 'province_id' => $province->id, 'min_rating' => 4]));
+
+        $response->assertOk()->assertSee('1 provider found');
+    }
+
+    public function test_sort_by_rating_ignores_availability_precedence(): void
+    {
+        $province = Province::factory()->create();
+        $municipality = Municipality::factory()->for($province)->create();
+        $service = Service::factory()->create();
+        $topRatedButOffline = User::factory()->serviceProvider()->create(['name' => 'Top Rated Offline']);
+        $lowRatedButAvailable = User::factory()->serviceProvider()->create(['name' => 'Low Rated Available']);
+        $this->searchableProfile($topRatedButOffline, $province, $municipality, $service, ['availability_status' => AvailabilityStatus::Offline, 'available_now' => false, 'rating_cached' => 5]);
+        $this->searchableProfile($lowRatedButAvailable, $province, $municipality, $service, ['availability_status' => AvailabilityStatus::Available, 'available_now' => true, 'rating_cached' => 1]);
+        $viewer = User::factory()->identityVerified()->create(['role' => UserRole::ServiceFinder]);
+        ProviderDocument::factory()->for($viewer)->create(['status' => VerificationStatus::Verified, 'expires_at' => now()->addYear()]);
+
+        $response = $this->actingAs($viewer)->get(route('providers.search', ['help' => 'service:'.$service->id, 'province_id' => $province->id, 'sort' => 'rating']));
+
+        $response->assertOk()->assertSeeInOrder([$topRatedButOffline->name, $lowRatedButAvailable->name]);
     }
 
     public function test_municipality_refinement_must_belong_to_selected_province(): void

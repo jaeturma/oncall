@@ -1,1 +1,22 @@
-<x-layouts.admin title="Audit history"><div class="grid gap-3">@forelse($logs as $log)<article class="rounded-xl bg-white p-5 shadow-sm ring-1 ring-slate-200"><div class="flex flex-wrap justify-between gap-3"><p class="font-black">{{ $log->event }}</p><time class="text-sm text-slate-500">{{ $log->created_at->format('M j, Y g:i A') }}</time></div><p class="mt-2 text-sm text-slate-600">Actor: {{ $log->actor?->name ?? 'System' }} · {{ class_basename($log->subject_type) }} #{{ $log->subject_id }}</p></article>@empty<p>No audit events.</p>@endforelse {{ $logs->links() }}</div></x-layouts.admin>
+<x-layouts.admin title="Audit log" description="Immutable record of sensitive actions across the platform.">
+    <section class="card">
+        <div class="table-wrap">
+            <table class="table">
+                <thead><tr><th>When</th><th>Event</th><th>Actor</th><th>Subject</th></tr></thead>
+                <tbody>
+                    @forelse($logs as $log)
+                        <tr>
+                            <td class="whitespace-nowrap text-ink-secondary"><time datetime="{{ $log->created_at->toIso8601String() }}">{{ $log->created_at->format('M j, Y g:i A') }}</time></td>
+                            <td><code class="rounded bg-surface-muted px-1.5 py-0.5 text-xs font-semibold text-navy-900">{{ $log->event }}</code></td>
+                            <td class="whitespace-nowrap">{{ $log->actor?->name ?? 'System' }}</td>
+                            <td class="whitespace-nowrap text-ink-secondary">{{ class_basename($log->subject_type) }} #{{ $log->subject_id }}</td>
+                        </tr>
+                    @empty
+                        <tr><td colspan="4" class="py-10 text-center text-ink-secondary">No audit events recorded yet.</td></tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </section>
+    @if($logs->hasPages())<div class="mt-5">{{ $logs->links() }}</div>@endif
+</x-layouts.admin>

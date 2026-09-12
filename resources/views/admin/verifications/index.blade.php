@@ -1,10 +1,43 @@
-<x-layouts.admin title="Verification review queue">
-    <div class="grid gap-6">
-        <x-flash />
-        <div><p class="font-bold uppercase tracking-widest text-navy-800">Administration</p><h1 class="text-3xl font-black">Verification review queue</h1><p class="mt-2 text-slate-600">Approval must be based on the private document. Automated submission never proves identity.</p></div>
-        @forelse($documents as $document)
-            <article class="rounded-2xl bg-white p-6 shadow-sm"><div class="flex flex-wrap items-start justify-between gap-4"><div><h2 class="text-xl font-black">{{ $document->user->name }}</h2><p class="text-slate-600">{{ str($document->document_type->value)->headline() }} · submitted {{ $document->created_at->diffForHumans() }}</p></div><a class="rounded-lg border border-slate-300 px-4 py-2 font-bold" href="{{ route('verification.documents.download', $document) }}">Open private document</a></div><form class="mt-6 grid gap-4 md:grid-cols-2" method="POST" action="{{ route('admin.verifications.update', $document) }}">@csrf @method('PATCH')<label class="grid gap-2 font-semibold">Decision<select class="rounded-lg border border-slate-300 p-3" name="status" required><option value="VERIFIED">Verify</option><option value="REJECTED">Reject</option><option value="EXPIRED">Mark expired</option></select></label><label class="grid gap-2 font-semibold">Valid until (optional)<input class="rounded-lg border border-slate-300 p-3" type="date" name="expires_at" min="{{ now()->addDay()->toDateString() }}"></label><label class="grid gap-2 font-semibold md:col-span-2">Review notes<textarea class="rounded-lg border border-slate-300 p-3" name="notes" rows="3" placeholder="Required for rejection or expiration"></textarea></label><button class="justify-self-start rounded-lg bg-navy-900 px-5 py-3 font-bold text-white">Save review</button></form></article>
-        @empty<div class="rounded-2xl bg-white p-8 text-center text-slate-500 shadow-sm">No verification submissions are waiting for review.</div>@endforelse
-        {{ $documents->links() }}
-    </div>
+@php
+    $documentLabels = [
+        'NATIONAL_ID' => 'National ID / government ID',
+        'DRIVERS_LICENSE' => "Driver's license",
+        'PASSPORT' => 'Passport',
+        'PROFESSIONAL_CREDENTIAL' => 'Professional license or credential',
+    ];
+@endphp
+
+<x-layouts.admin title="Verification review queue" description="Approval must be based on the private document itself. A submission never proves identity on its own.">
+    @if($documents->isEmpty())
+        <x-empty-state icon="identification" title="Queue is clear" message="No verification submissions are waiting for review." />
+    @else
+        <div class="grid gap-4">
+            @foreach($documents as $document)
+                <article class="card">
+                    <div class="card-header">
+                        <div class="flex items-center gap-3">
+                            <x-ui.avatar :name="$document->user->name" size="md" />
+                            <div>
+                                <h2 class="font-semibold text-ink">{{ $document->user->name }}</h2>
+                                <p class="text-sm text-ink-muted">{{ $documentLabels[$document->document_type->value] ?? str($document->document_type->value)->headline() }} &middot; submitted {{ $document->created_at->diffForHumans() }} &middot; {{ str($document->user->role->value)->replace('_', ' ')->lower()->ucfirst() }}</p>
+                            </div>
+                        </div>
+                        <x-ui.button :href="route('verification.documents.download', $document)" variant="secondary" size="sm" icon="document-check">Open private document</x-ui.button>
+                    </div>
+                    <form class="grid gap-4 p-5 sm:grid-cols-2 sm:p-6" method="POST" action="{{ route('admin.verifications.update', $document) }}">
+                        @csrf @method('PATCH')
+                        <x-form.select name="status" label="Decision" required>
+                            <option value="VERIFIED">Verify — document is genuine and matches the account</option>
+                            <option value="REJECTED">Reject — unclear, mismatched, or invalid</option>
+                            <option value="EXPIRED">Mark expired</option>
+                        </x-form.select>
+                        <x-form.input name="expires_at" type="date" label="Valid until" :min="now()->addDay()->toDateString()" optional hint="Set for licenses and IDs with an expiry date." />
+                        <x-form.textarea name="notes" label="Review notes" rows="2" wrapper-class="sm:col-span-2" placeholder="Required when rejecting or marking expired. Shown to the user." />
+                        <div class="sm:col-span-2"><x-ui.button variant="dark" data-loading-text="Saving…">Save review</x-ui.button></div>
+                    </form>
+                </article>
+            @endforeach
+        </div>
+        @if($documents->hasPages())<div class="mt-5">{{ $documents->links() }}</div>@endif
+    @endif
 </x-layouts.admin>

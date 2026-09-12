@@ -20,7 +20,7 @@ class JobMessage extends Model
 
     protected function casts(): array
     {
-        return ['type' => JobMessageType::class];
+        return ['type' => JobMessageType::class, 'read_at' => 'datetime'];
     }
 
     public function job(): BelongsTo

@@ -1,58 +1,57 @@
-<x-layouts.admin title="Review dispute">
-    <div class="grid gap-6">
-        <x-flash />
+@php($peso = fn ($amount): string => '₱'.number_format((float) $amount, 2))
 
-        <article class="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
-            <div class="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                    <h1 class="text-2xl font-black">{{ $dispute->job->serviceRequest->title }}</h1>
-                    <p class="mt-1 text-slate-600">{{ str($dispute->category->value)->replace('_', ' ')->title() }} &middot; opened {{ $dispute->created_at->format('M j, Y') }}</p>
-                </div>
-                <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold">{{ str($dispute->status->value)->replace('_', ' ')->title() }}</span>
-            </div>
-            <dl class="mt-5 grid gap-4 text-sm sm:grid-cols-2">
-                <div><dt class="font-bold">Raised by</dt><dd>{{ $dispute->raisedBy->name }} ({{ $dispute->raised_by === $dispute->job->service_finder_id ? 'Service Finder' : 'Provider' }})</dd></div>
-                <div><dt class="font-bold">Against</dt><dd>{{ $dispute->againstUser->name }}</dd></div>
-                <div><dt class="font-bold">Agreed price</dt><dd>PHP {{ number_format((float) $dispute->job->agreed_price, 2) }}</dd></div>
-                <div><dt class="font-bold">Payment status</dt><dd>{{ $dispute->job->jobPayment ? str($dispute->job->jobPayment->status->value)->title().' (provider net PHP '.number_format((float) $dispute->job->jobPayment->net_amount, 2).')' : 'No payment record' }}</dd></div>
-            </dl>
-            <p class="mt-5 whitespace-pre-line rounded-xl bg-slate-50 p-4 text-slate-700">{{ $dispute->description }}</p>
-            @if($dispute->enforcementCase)<p class="mt-3 text-sm"><a class="font-bold text-navy-800 hover:underline" href="{{ route('admin.enforcement.show', $dispute->enforcementCase) }}">Linked enforcement case &rarr;</a></p>@endif
-        </article>
+<x-layouts.admin :title="$dispute->job->serviceRequest->title" :description="str($dispute->category->value)->replace('_', ' ')->lower()->ucfirst().' · opened '.$dispute->created_at->format('M j, Y')">
+    <x-slot:actions><x-ui.status-badge :status="$dispute->status" class="px-3 py-1.5 text-sm" /></x-slot:actions>
 
-        @if($dispute->isOpen())
-            <form class="grid gap-5 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200" method="POST" action="{{ route('admin.disputes.update', $dispute) }}">
-                @csrf @method('PATCH')
-                <h2 class="text-xl font-black">Resolve</h2>
-                <label class="grid gap-2 font-semibold">Decision
-                    <select class="rounded-lg border border-slate-300 p-3" name="action" required>
+    <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
+        <div class="grid content-start gap-6">
+            <section class="card card-pad">
+                <h2 class="h3">Dispute</h2>
+                <dl class="mt-4 grid gap-4 text-sm sm:grid-cols-2">
+                    <div><dt class="text-ink-muted">Raised by</dt><dd class="mt-0.5 font-medium text-ink">{{ $dispute->raisedBy->name }} <span class="text-ink-muted">({{ $dispute->raised_by === $dispute->job->service_finder_id ? 'customer' : 'provider' }})</span></dd></div>
+                    <div><dt class="text-ink-muted">Against</dt><dd class="mt-0.5 font-medium text-ink">{{ $dispute->againstUser->name }}</dd></div>
+                    <div><dt class="text-ink-muted">Agreed price</dt><dd class="mt-0.5 font-medium text-ink tabular-nums">{{ $peso($dispute->job->agreed_price) }}</dd></div>
+                    <div><dt class="text-ink-muted">Payment</dt><dd class="mt-0.5 font-medium text-ink">@if($dispute->job->jobPayment)<x-ui.status-badge :status="$dispute->job->jobPayment->status" /> <span class="text-ink-secondary">provider net {{ $peso($dispute->job->jobPayment->net_amount) }}</span>@else<span class="text-ink-muted">No payment record</span>@endif</dd></div>
+                </dl>
+                <p class="mt-5 whitespace-pre-line rounded-lg bg-surface-muted p-4 text-sm text-ink">{{ $dispute->description }}</p>
+                @if($dispute->enforcementCase)<a class="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-navy-800 hover:underline" href="{{ route('admin.enforcement.show', $dispute->enforcementCase) }}">Linked enforcement case <x-ui.icon name="arrow-right" class="size-4" /></a>@endif
+            </section>
+
+            @if($dispute->isOpen())
+                <form class="card card-pad grid gap-5" method="POST" action="{{ route('admin.disputes.update', $dispute) }}">
+                    @csrf @method('PATCH')
+                    <h2 class="h3">Resolve</h2>
+                    <x-form.errors />
+                    <x-form.select name="action" label="Decision" required>
                         @if($dispute->status === App\Enums\DisputeStatus::Open)<option value="start_review">Move to review only (no payment change)</option>@endif
-                        <option value="reject">Reject &mdash; job stands, payment proceeds normally</option>
-                        <option value="uphold">Uphold &mdash; reverse the whole payment, cancel the job</option>
-                        <option value="partial">Partial &mdash; reduce the provider's earning by a refund amount</option>
-                    </select>
-                    @error('action')<span class="text-sm font-normal text-red-700">{{ $message }}</span>@enderror
-                </label>
-                <label class="grid gap-2 font-semibold">Refund amount (PHP) &mdash; <span class="font-normal text-slate-500">Partial decision only</span>
-                    <input class="rounded-lg border border-slate-300 p-3" type="number" name="refund_amount" min="0.01" step="0.01" value="{{ old('refund_amount') }}">
-                    @error('refund_amount')<span class="text-sm font-normal text-red-700">{{ $message }}</span>@enderror
-                </label>
-                <label class="grid gap-2 font-semibold">Resolution notes <span class="font-normal text-slate-500">(shown to both parties; required unless "review only")</span>
-                    <textarea class="rounded-lg border border-slate-300 p-3" name="resolution" rows="3">{{ old('resolution') }}</textarea>
-                    @error('resolution')<span class="text-sm font-normal text-red-700">{{ $message }}</span>@enderror
-                </label>
-                <div class="grid gap-2">
-                    <label class="flex items-center gap-2 font-semibold"><input type="checkbox" name="open_enforcement" value="1" @checked(old('open_enforcement'))> Also open an enforcement case</label>
-                    <select class="w-64 rounded-lg border border-slate-300 p-2 text-sm" name="enforce_against">
-                        <option value="respondent">Against {{ $dispute->againstUser->name }} (respondent)</option>
-                        <option value="raiser">Against {{ $dispute->raisedBy->name }} (raiser)</option>
-                    </select>
-                    @error('enforce_against')<span class="text-sm font-normal text-red-700">{{ $message }}</span>@enderror
-                </div>
-                <button class="justify-self-start rounded-lg bg-gold-400 px-6 py-3 font-bold text-navy-900 hover:bg-gold-500">Apply</button>
-            </form>
-        @else
-            <div class="rounded-2xl bg-white p-6 text-slate-600 shadow-sm ring-1 ring-slate-200">Resolved as <span class="font-bold">{{ str($dispute->status->value)->replace('_', ' ')->title() }}</span> by {{ $dispute->resolver?->name }} on {{ $dispute->resolved_at?->format('M j, Y') }}. @if($dispute->resolution)<span class="mt-2 block">{{ $dispute->resolution }}</span>@endif</div>
-        @endif
+                        <option value="reject">Reject — job stands, payment proceeds normally</option>
+                        <option value="uphold">Uphold — reverse the whole payment, cancel the job</option>
+                        <option value="partial">Partial — reduce the provider's earning by a refund amount</option>
+                    </x-form.select>
+                    <x-form.input name="refund_amount" type="number" label="Refund amount (₱)" min="0.01" step="0.01" inputmode="decimal" hint="Partial decisions only." class="sm:max-w-xs" />
+                    <x-form.textarea name="resolution" label="Resolution notes" rows="3" hint="Shown to both parties. Required unless 'review only'." />
+                    <fieldset class="grid gap-3 rounded-xl border border-line p-4">
+                        <legend class="px-1 text-sm font-semibold text-ink">Enforcement</legend>
+                        <x-form.checkbox name="open_enforcement" label="Also open an enforcement case" :checked="(bool) old('open_enforcement')" />
+                        <x-form.select name="enforce_against" label="Against">
+                            <option value="respondent">{{ $dispute->againstUser->name }} (respondent)</option>
+                            <option value="raiser">{{ $dispute->raisedBy->name }} (raiser)</option>
+                        </x-form.select>
+                    </fieldset>
+                    <div><x-ui.button variant="primary" data-loading-text="Applying…">Apply decision</x-ui.button></div>
+                </form>
+            @else
+                <x-ui.alert tone="info" :title="'Resolved as '.str($dispute->status->value)->replace('_', ' ')->lower()">By {{ $dispute->resolver?->name }} on {{ $dispute->resolved_at?->format('M j, Y') }}.@if($dispute->resolution) <span class="mt-1 block">{{ $dispute->resolution }}</span>@endif</x-ui.alert>
+            @endif
+        </div>
+
+        <aside class="card card-pad text-sm">
+            <p class="font-semibold text-ink">What each decision does</p>
+            <ul class="mt-3 grid gap-2.5 text-ink-secondary">
+                <li><span class="font-medium text-ink">Reject:</span> the job stands and its payment proceeds normally.</li>
+                <li><span class="font-medium text-ink">Uphold:</span> the whole payment is reversed and the job is cancelled.</li>
+                <li><span class="font-medium text-ink">Partial:</span> the provider's earning is reduced by the refund amount.</li>
+            </ul>
+        </aside>
     </div>
 </x-layouts.admin>

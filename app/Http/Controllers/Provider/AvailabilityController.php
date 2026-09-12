@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Provider;
 
+use App\Enums\AvailabilityStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\UpdateProviderAvailabilityRequest;
 use App\Models\ProviderProfile;
@@ -13,6 +14,9 @@ class AvailabilityController extends Controller
     {
         $providerProfile->update($request->validated());
 
-        return back()->with('status', $providerProfile->available_now ? 'You are available now.' : 'You are unavailable.');
+        /** @var AvailabilityStatus $status */
+        $status = $providerProfile->availability_status;
+
+        return back()->with('status', 'Availability set to "'.$status->label().'".');
     }
 }
