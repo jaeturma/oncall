@@ -8,8 +8,12 @@
 @endphp
 
 <x-layouts.admin title="Verification review queue" description="Approval must be based on the private document itself. A submission never proves identity on its own.">
+    <div class="mb-5 flex gap-2">
+        <x-ui.button :href="route('admin.verifications.index', ['status' => 'SUBMITTED'])" :variant="$status->value === 'SUBMITTED' ? 'dark' : 'secondary'" size="sm">Pending review</x-ui.button>
+        <x-ui.button :href="route('admin.verifications.index', ['status' => 'VERIFIED'])" :variant="$status->value === 'VERIFIED' ? 'dark' : 'secondary'" size="sm">Verified (revoke)</x-ui.button>
+    </div>
     @if($documents->isEmpty())
-        <x-empty-state icon="identification" title="Queue is clear" message="No verification submissions are waiting for review." />
+        <x-empty-state icon="identification" title="Queue is clear" message="No documents match this filter." />
     @else
         <div class="grid gap-4">
             @foreach($documents as $document)

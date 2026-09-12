@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Enums\DocumentType;
+use App\Enums\UserRole;
 use App\Enums\VerificationStatus;
 use App\Models\ProviderDocument;
 use App\Models\ProviderProfile;
@@ -113,6 +114,82 @@ class VerificationTest extends TestCase
         $this->actingAs($serviceFinder)->patch(route('admin.verifications.update', $document), ['status' => VerificationStatus::Verified->value])->assertForbidden();
 
         $this->assertSame(VerificationStatus::Submitted, $document->refresh()->status);
+    }
+
+    public function test_document_owner_cannot_approve_their_own_submission(): void
+    {
+        $owner = User::factory()->create();
+        $document = ProviderDocument::factory()->for($owner)->create();
+
+        $this->actingAs($owner)->patch(route('admin.verifications.update', $document), ['status' => VerificationStatus::Verified->value])->assertForbidden();
+
+        $this->assertSame(VerificationStatus::Submitted, $document->refresh()->status);
+    }
+
+    /** Back-office staff outside the Admin role (which covers Verifier per ADR-001) may not review verifications either. */
+    public function test_unrelated_back_office_role_cannot_review_submission(): void
+    {
+        $document = ProviderDocument::factory()->create();
+        $accounting = User::factory()->create(['role' => UserRole::Accounting]);
+
+        $this->actingAs($accounting)->patch(route('admin.verifications.update', $document), ['status' => VerificationStatus::Verified->value])->assertForbidden();
+
+        $this->assertSame(VerificationStatus::Submitted, $document->refresh()->status);
+    }
+
+    public function test_reviewing_a_submission_writes_an_audit_log_entry(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $document = ProviderDocument::factory()->create();
+
+        $this->actingAs($admin)->patch(route('admin.verifications.update', $document), ['status' => VerificationStatus::Rejected->value, 'notes' => 'Blurry photo.']);
+
+        $this->assertDatabaseHas('audit_logs', [
+            'actor_id' => $admin->id,
+            'event' => 'verification.reviewed',
+            'subject_type' => ProviderDocument::class,
+            'subject_id' => $document->id,
+        ]);
+    }
+
+    public function test_admin_can_revoke_a_previously_verified_document(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $profile = ProviderProfile::factory()->create(['verification_status' => VerificationStatus::Verified]);
+        $document = ProviderDocument::factory()->for($profile->user)->create(['status' => VerificationStatus::Verified, 'reviewed_by' => $admin->id, 'reviewed_at' => now()]);
+        $profile->user->update(['identity_verification_status' => VerificationStatus::Verified]);
+        $profile->user->verificationRecords()->create(['type' => 'IDENTITY', 'status' => VerificationStatus::Verified]);
+
+        $response = $this->actingAs($admin)->patch(route('admin.verifications.update', $document), ['status' => VerificationStatus::Expired->value, 'notes' => 'Government ID reported lost; revoking until resubmission.']);
+
+        $response->assertRedirect();
+        $this->assertSame(VerificationStatus::Expired, $document->refresh()->status);
+        $this->assertSame(VerificationStatus::Expired, $profile->user->refresh()->identity_verification_status);
+        $this->assertSame(VerificationStatus::Expired, $profile->refresh()->verification_status);
+        $this->assertDatabaseHas('audit_logs', ['actor_id' => $admin->id, 'event' => 'verification.revoked', 'subject_type' => ProviderDocument::class, 'subject_id' => $document->id]);
+    }
+
+    public function test_a_rejected_document_cannot_be_reopened(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $document = ProviderDocument::factory()->create(['status' => VerificationStatus::Rejected]);
+
+        $this->actingAs($admin)->patch(route('admin.verifications.update', $document), ['status' => VerificationStatus::Verified->value])->assertStatus(422);
+
+        $this->assertSame(VerificationStatus::Rejected, $document->refresh()->status);
+    }
+
+    public function test_verification_queue_filters_by_status(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $submitted = ProviderDocument::factory()->create(['status' => VerificationStatus::Submitted]);
+        $verified = ProviderDocument::factory()->create(['status' => VerificationStatus::Verified]);
+
+        $pending = $this->actingAs($admin)->get(route('admin.verifications.index', ['status' => 'SUBMITTED']));
+        $pending->assertSee($submitted->user->name)->assertDontSee($verified->user->name);
+
+        $verifiedQueue = $this->actingAs($admin)->get(route('admin.verifications.index', ['status' => 'VERIFIED']));
+        $verifiedQueue->assertSee($verified->user->name)->assertDontSee($submitted->user->name);
     }
 
     public function test_service_request_eligibility_requires_current_substantiated_verification(): void
