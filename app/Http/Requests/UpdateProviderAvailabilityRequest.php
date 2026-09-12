@@ -2,9 +2,11 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\AvailabilityStatus;
 use App\Enums\UserRole;
 use App\Models\ProviderProfile;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rules\Enum;
 
 class UpdateProviderAvailabilityRequest extends FormRequest
 {
@@ -17,6 +19,6 @@ class UpdateProviderAvailabilityRequest extends FormRequest
 
     public function rules(): array
     {
-        return ['available_now' => ['required', 'boolean']];
+        return ['availability_status' => ['required', new Enum(AvailabilityStatus::class)]];
     }
 }

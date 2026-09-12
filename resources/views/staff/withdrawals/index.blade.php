@@ -1,55 +1,58 @@
-<x-layouts.app title="Withdrawal queue">
+<x-layouts.app title="Withdrawal queue" :eyebrow="str($actingRole->value)->lower()->ucfirst()" description="Requested → Accounting review → Budget approval → Cashier disbursement. You can only act on the step assigned to your role." wide>
     <div class="grid gap-6">
-        <x-flash />
-        <div><p class="font-bold uppercase tracking-widest text-navy-800">{{ str($actingRole->value)->title() }}</p><h1 class="text-3xl font-black">Withdrawal queue</h1><p class="mt-2 text-slate-600">Requested &rarr; Accounting review &rarr; Budget approval &rarr; Cashier disbursement. You can only act on the step assigned to your role.</p></div>
-
-        <div class="grid gap-4">
-            @forelse($open as $withdrawal)
-                <article class="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
-                    <div class="flex flex-wrap items-start justify-between gap-3">
-                        <div>
-                            <p class="text-lg font-black">PHP {{ number_format((float) $withdrawal->amount, 2) }}</p>
-                            <p class="text-sm text-slate-600">{{ $withdrawal->user->name }} &middot; {{ $withdrawal->payout_method }} &middot; {{ $withdrawal->payout_reference }}</p>
-                            <p class="mt-1 text-xs text-slate-500">Requested {{ $withdrawal->created_at->diffForHumans() }}</p>
-                        </div>
-                        <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold">{{ str($withdrawal->status->value)->replace('_', ' ')->title() }}</span>
-                    </div>
-                    @if($withdrawal->notes)<p class="mt-3 rounded-lg bg-slate-50 p-3 text-sm text-slate-600">{{ $withdrawal->notes }}</p>@endif
-
-                    @can('review', $withdrawal)
-                        <form class="mt-5 grid gap-3 border-t border-slate-200 pt-5 sm:grid-cols-[1fr_auto]" method="POST" action="{{ route('staff.withdrawals.update', $withdrawal) }}">
-                            @csrf @method('PATCH')
-                            <input class="rounded-lg border border-slate-300 p-2 text-sm" type="text" name="notes" maxlength="1000" placeholder="Notes (required to return or reject)">
-                            <div class="flex flex-wrap gap-2">
-                                <button class="rounded-lg bg-gold-400 px-4 py-2 text-sm font-bold text-navy-900 hover:bg-gold-500" name="decision" value="approve">{{ $withdrawal->status === App\Enums\WithdrawalStatus::ForDisbursement ? 'Mark disbursed' : 'Approve' }}</button>
-                                <button class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-bold" name="decision" value="return">Return</button>
-                                <button class="rounded-lg border border-red-300 px-4 py-2 text-sm font-bold text-red-700" name="decision" value="reject">Reject</button>
+        <section>
+            <h2 class="h3 mb-3">Open requests</h2>
+            @if($open->isEmpty())
+                <x-empty-state compact icon="banknotes" title="Nothing in the queue" message="New withdrawal requests will appear here as they move through each step." />
+            @else
+                <div class="grid gap-4">
+                    @foreach($open as $withdrawal)
+                        <article class="card card-pad">
+                            <div class="flex flex-wrap items-start justify-between gap-3">
+                                <div class="flex items-start gap-3">
+                                    <x-ui.avatar :name="$withdrawal->user->name" size="md" />
+                                    <div>
+                                        <p class="text-lg font-bold text-ink tabular-nums">₱{{ number_format((float) $withdrawal->amount, 2)}}</p>
+                                        <p class="text-sm text-ink">{{ $withdrawal->user->name }}</p>
+                                        <p class="text-sm text-ink-secondary">{{ $withdrawal->payout_method }} &middot; {{ $withdrawal->payout_reference }}</p>
+                                        <p class="mt-0.5 text-xs text-ink-muted">Requested {{ $withdrawal->created_at->diffForHumans() }}</p>
+                                    </div>
+                                </div>
+                                <x-ui.status-badge :status="$withdrawal->status" />
                             </div>
-                            @error('notes')<span class="text-sm text-red-700 sm:col-span-2">{{ $message }}</span>@enderror
-                        </form>
-                    @else
-                        <p class="mt-4 text-sm text-slate-500">Waiting on the {{ str($withdrawal->status->actingRole()?->value)->title() }} step.</p>
-                    @endcan
-                </article>
-            @empty
-                <div class="rounded-2xl bg-white p-8 text-center text-slate-500 shadow-sm ring-1 ring-slate-200">Nothing in the queue.</div>
-            @endforelse
-        </div>
+                            @if($withdrawal->notes)<p class="mt-3 rounded-lg bg-surface-muted p-3 text-sm text-ink-secondary"><span class="font-medium text-ink">Notes:</span> {{ $withdrawal->notes }}</p>@endif
 
-        <section class="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200">
-            <div class="border-b border-slate-200 p-6"><h2 class="text-xl font-black">Recently closed</h2></div>
-            <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-slate-200 text-left text-sm">
-                    <thead class="bg-slate-50"><tr><th class="px-6 py-3">User</th><th class="px-6 py-3">Amount</th><th class="px-6 py-3">Status</th><th class="px-6 py-3">Updated</th></tr></thead>
-                    <tbody class="divide-y divide-slate-100">
-                        @forelse($recent as $withdrawal)
-                            <tr><td class="px-6 py-4">{{ $withdrawal->user->name }}</td><td class="px-6 py-4 font-bold">PHP {{ number_format((float) $withdrawal->amount, 2) }}</td><td class="px-6 py-4">{{ str($withdrawal->status->value)->replace('_', ' ')->title() }}</td><td class="px-6 py-4">{{ $withdrawal->updated_at->format('M j, Y') }}</td></tr>
-                        @empty
-                            <tr><td class="px-6 py-8 text-center text-slate-500" colspan="4">No closed withdrawals.</td></tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
+                            @can('review', $withdrawal)
+                                <form class="mt-5 grid gap-3 border-t border-line pt-5 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end" method="POST" action="{{ route('staff.withdrawals.update', $withdrawal) }}">
+                                    @csrf @method('PATCH')
+                                    <x-form.input name="notes" label="Notes" maxlength="1000" placeholder="Required when returning or rejecting" />
+                                    <div class="flex flex-wrap gap-2">
+                                        <x-ui.button variant="primary" name="decision" value="approve" data-loading-text="Saving…">{{ $withdrawal->status === App\Enums\WithdrawalStatus::ForDisbursement ? 'Mark disbursed' : 'Approve' }}</x-ui.button>
+                                        <x-ui.button variant="secondary" name="decision" value="return" data-loading-text="Saving…">Return</x-ui.button>
+                                        <x-ui.button variant="danger" name="decision" value="reject" data-loading-text="Saving…">Reject</x-ui.button>
+                                    </div>
+                                </form>
+                            @else
+                                <p class="mt-4 flex items-center gap-1.5 text-sm text-ink-muted"><x-ui.icon name="clock" class="size-4" />Waiting on the {{ str($withdrawal->status->actingRole()?->value)->lower()->ucfirst() }} step.</p>
+                            @endcan
+                        </article>
+                    @endforeach
+                </div>
+            @endif
+        </section>
+
+        <section class="card">
+            <div class="card-header"><h2 class="h3">Recently closed</h2></div>
+            <div class="table-wrap"><table class="table">
+                <thead><tr><th>User</th><th class="num">Amount</th><th>Status</th><th>Updated</th></tr></thead>
+                <tbody>
+                    @forelse($recent as $withdrawal)
+                        <tr><td>{{ $withdrawal->user->name }}</td><td class="num font-semibold whitespace-nowrap">₱{{ number_format((float) $withdrawal->amount, 2) }}</td><td><x-ui.status-badge :status="$withdrawal->status" /></td><td class="whitespace-nowrap text-ink-secondary">{{ $withdrawal->updated_at->format('M j, Y') }}</td></tr>
+                    @empty
+                        <tr><td colspan="4" class="py-8 text-center text-ink-secondary">No closed withdrawals yet.</td></tr>
+                    @endforelse
+                </tbody>
+            </table></div>
         </section>
     </div>
 </x-layouts.app>

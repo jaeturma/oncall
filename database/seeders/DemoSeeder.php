@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Enums\AvailabilityStatus;
 use App\Enums\CommissionStatus;
 use App\Enums\CommissionType;
 use App\Enums\DisputeCategory;
@@ -55,11 +56,11 @@ class DemoSeeder extends Seeder
         // Searchable providers. The first two are sponsored by Josefa, so
         // verifying them posts a sponsor commission.
         $this->provider('pedro@oncall.ph', 'Pedro Santos', 'Driver', 'Tagum City', 'Davao del Norte', available: true, rating: 4.9, completed: 128, credentials: ['Professional Driver\'s License', 'Defensive driving certificate', '6 years experience'], sponsor: $sponsor, accountTypeSlug: 'verified-provider');
-        $this->provider('ramon@oncall.ph', 'Ramon Villanueva', 'Electrician', 'Tagum City', 'Davao del Norte', available: true, rating: 4.8, completed: 96, credentials: ['TESDA NC II Electrical Installation', 'PEC-compliant wiring'], sponsor: $sponsor, accountTypeSlug: 'premium-provider');
+        $this->provider('ramon@oncall.ph', 'Ramon Villanueva', 'Electrician', 'Tagum City', 'Davao del Norte', available: false, rating: 4.8, completed: 96, credentials: ['TESDA NC II Electrical Installation', 'PEC-compliant wiring'], sponsor: $sponsor, accountTypeSlug: 'premium-provider', availabilityStatus: AvailabilityStatus::Busy);
         $this->provider('lito@oncall.ph', 'Lito Bautista', 'Plumber', 'Panabo City', 'Davao del Norte', available: true, rating: 4.6, completed: 54, credentials: ['TESDA NC II Plumbing'], accountTypeSlug: 'verified-provider');
         $this->provider('grace@oncall.ph', 'Grace Fernandez', 'Babysitter', 'Davao City', 'Davao del Sur', available: true, rating: 4.9, completed: 71, credentials: ['Childcare seminar certificate', 'First-aid trained'], accountTypeSlug: 'verified-provider');
         $this->provider('noel@oncall.ph', 'Noel Mercado', 'Auto Mechanic', 'Digos City', 'Davao del Sur', available: false, rating: 4.4, completed: 33, credentials: ['TESDA NC II Automotive Servicing'], accountTypeSlug: 'verified-provider');
-        $this->provider('divina@oncall.ph', 'Divina Reyes', 'Tutor', 'Quezon City', 'Metro Manila', available: true, rating: 5.0, completed: 40, credentials: ['Licensed Professional Teacher (LET)'], accountTypeSlug: 'verified-provider');
+        $this->provider('divina@oncall.ph', 'Divina Reyes', 'Tutor', 'Quezon City', 'Metro Manila', available: false, rating: 5.0, completed: 40, credentials: ['Licensed Professional Teacher (LET)'], accountTypeSlug: 'verified-provider', availabilityStatus: AvailabilityStatus::ByAppointment);
         $this->provider('arturo@oncall.ph', 'Arturo Mendoza', 'Carpenter', 'Tagum City', 'Davao del Norte', available: true, rating: 4.3, completed: 18, credentials: ['15 years finishing carpentry'], accountTypeSlug: 'verified-provider');
         $this->provider('marites@oncall.ph', 'Marites Lim', 'House Cleaning', 'Cebu City', 'Cebu', available: true, rating: 4.7, completed: 62, credentials: ['Bonded and background-checked'], accountTypeSlug: 'verified-provider');
 
@@ -244,10 +245,11 @@ class DemoSeeder extends Seeder
     /**
      * @param  list<string>  $credentials
      */
-    private function provider(string $email, string $name, string $serviceName, string $municipalityName, string $provinceName, bool $available, float $rating, int $completed, array $credentials, ?User $sponsor = null, ?string $accountTypeSlug = null): void
+    private function provider(string $email, string $name, string $serviceName, string $municipalityName, string $provinceName, bool $available, float $rating, int $completed, array $credentials, ?User $sponsor = null, ?string $accountTypeSlug = null, ?AvailabilityStatus $availabilityStatus = null): void
     {
         $municipality = $this->municipality($municipalityName, $provinceName);
         $service = Service::query()->where('name', $serviceName)->sole();
+        $status = $availabilityStatus ?? ($available ? AvailabilityStatus::Available : AvailabilityStatus::Offline);
 
         // Create the user first WITHOUT verifying, wire the sponsor + account
         // type, then verify so the commission trigger sees the full picture.
@@ -270,7 +272,8 @@ class DemoSeeder extends Seeder
                 'province_id' => $municipality->province_id,
                 'municipality_id' => $municipality->id,
                 'bio' => 'Background-checked '.strtolower($serviceName).' serving '.$municipalityName.' and nearby areas. All bookings, agreements, and payments stay on Oncall Philippines.',
-                'available_now' => $available,
+                'available_now' => $status->isAvailableNow(),
+                'availability_status' => $status,
                 'service_radius_km' => 20,
                 'verification_status' => VerificationStatus::Verified,
                 'credentials_metadata' => $credentials,

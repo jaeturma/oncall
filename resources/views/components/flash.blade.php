@@ -1,6 +1,13 @@
-@if(session('status'))
-    <div {{ $attributes->merge(['class' => 'rounded-xl border border-gold-200 bg-gold-50 p-4 font-semibold text-navy-900']) }} role="status">{{ session('status') }}</div>
-@endif
-@if(session('error'))
-    <div {{ $attributes->merge(['class' => 'rounded-xl border border-red-200 bg-red-50 p-4 font-semibold text-red-800']) }} role="alert">{{ session('error') }}</div>
+@if(session('status') || session('error') || session('warning'))
+    <div {{ $attributes->class(['grid gap-3']) }}>
+        @if(session('status'))
+            <x-ui.alert tone="success">{{ session('status') }}</x-ui.alert>
+        @endif
+        @if(session('warning'))
+            <x-ui.alert tone="warning">{{ session('warning') }}</x-ui.alert>
+        @endif
+        @if(session('error'))
+            <x-ui.alert tone="danger">{{ session('error') }}</x-ui.alert>
+        @endif
+    </div>
 @endif

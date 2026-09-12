@@ -1,50 +1,29 @@
-<x-layouts.admin :title="$accountType->exists ? 'Edit account type' : 'New account type'">
-    <div class="mx-auto max-w-2xl rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
-        <h1 class="text-3xl font-black">{{ $accountType->exists ? 'Edit account type' : 'New account type' }}</h1>
+<x-layouts.admin :title="$accountType->exists ? 'Edit account type' : 'New account type'" description="Fees and commission rules apply to registrations that use this account type.">
+    <form class="card card-pad grid max-w-2xl gap-6 sm:p-8" method="POST" action="{{ $accountType->exists ? route('admin.account-types.update', $accountType) : route('admin.account-types.store') }}">
+        @csrf
+        @if($accountType->exists) @method('PUT') @endif
+        <x-form.errors />
 
-        @if($errors->any())
-            <div class="mt-6 rounded-xl border border-red-200 bg-red-50 p-4 text-red-800"><ul class="list-disc space-y-1 pl-5 text-sm">@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>
-        @endif
+        <x-form.input name="name" label="Name" :value="$accountType->name" maxlength="120" required />
+        <x-form.input name="registration_fee" type="number" label="Registration fee (₱)" min="0" step="0.01" inputmode="decimal" :value="$accountType->registration_fee ?? '0.00'" required hint="Percentage commissions are calculated against this amount." />
 
-        <form class="mt-8 grid gap-6" method="POST" action="{{ $accountType->exists ? route('admin.account-types.update', $accountType) : route('admin.account-types.store') }}">
-            @csrf
-            @if($accountType->exists) @method('PUT') @endif
+        <div class="grid gap-6 sm:grid-cols-2">
+            <x-form.select name="sponsor_commission_type" label="Sponsor commission type">
+                @foreach(App\Enums\CommissionType::cases() as $type)<option value="{{ $type->value }}" @selected(old('sponsor_commission_type', $accountType->sponsor_commission_type?->value ?? 'NONE') === $type->value)>{{ str($type->value)->lower()->ucfirst() }}</option>@endforeach
+            </x-form.select>
+            <x-form.input name="sponsor_commission_value" type="number" label="Commission value" min="0" step="0.01" inputmode="decimal" :value="$accountType->sponsor_commission_value ?? '0.00'" required hint="Peso amount for Fixed, or percent (0–100) for Percentage." />
+        </div>
 
-            <label class="grid gap-2 font-semibold">Name
-                <input class="rounded-lg border border-slate-300 p-3" type="text" name="name" value="{{ old('name', $accountType->name) }}" maxlength="120" required>
-            </label>
+        <x-form.input name="platform_commission_percent" type="number" label="Oncall platform commission (%)" min="0" max="100" step="0.01" inputmode="decimal" :value="$accountType->platform_commission_percent" placeholder="Leave blank to use the global default" :hint="'Percent of a completed job\'s agreed price. Blank uses the global default of '.config('oncall.platform.commission_percent').'%.'" />
 
-            <label class="grid gap-2 font-semibold">Registration fee (PHP)
-                <input class="rounded-lg border border-slate-300 p-3" type="number" name="registration_fee" min="0" step="0.01" value="{{ old('registration_fee', $accountType->registration_fee ?? '0.00') }}" required>
-                <span class="text-sm font-normal text-slate-500">Percentage commissions are calculated against this amount.</span>
-            </label>
+        <div class="grid gap-3">
+            <x-form.checkbox name="requires_identity_verification" label="Requires identity verification" hint="Users must be verified before sending or accepting requests." :checked="(bool) old('requires_identity_verification', $accountType->requires_identity_verification ?? true)" boxed />
+            <x-form.checkbox name="active" label="Active" hint="Available to new registrations." :checked="(bool) old('active', $accountType->active ?? true)" boxed />
+        </div>
 
-            <div class="grid gap-6 sm:grid-cols-2">
-                <label class="grid gap-2 font-semibold">Sponsor commission type
-                    <select class="rounded-lg border border-slate-300 p-3" name="sponsor_commission_type">
-                        @foreach(App\Enums\CommissionType::cases() as $type)
-                            <option value="{{ $type->value }}" @selected(old('sponsor_commission_type', $accountType->sponsor_commission_type?->value ?? 'NONE') === $type->value)>{{ str($type->value)->title() }}</option>
-                        @endforeach
-                    </select>
-                </label>
-                <label class="grid gap-2 font-semibold">Commission value
-                    <input class="rounded-lg border border-slate-300 p-3" type="number" name="sponsor_commission_value" min="0" step="0.01" value="{{ old('sponsor_commission_value', $accountType->sponsor_commission_value ?? '0.00') }}" required>
-                    <span class="text-sm font-normal text-slate-500">Peso amount for Fixed, or percent (0–100) for Percentage.</span>
-                </label>
-            </div>
-
-            <label class="grid gap-2 font-semibold">Oncall platform commission (% of a completed job's agreed price)
-                <input class="rounded-lg border border-slate-300 p-3" type="number" name="platform_commission_percent" min="0" max="100" step="0.01" value="{{ old('platform_commission_percent', $accountType->platform_commission_percent) }}" placeholder="Leave blank to use the global default">
-                <span class="text-sm font-normal text-slate-500">Blank uses <code>config('oncall.platform.commission_percent')</code> ({{ config('oncall.platform.commission_percent') }}%).</span>
-            </label>
-
-            <label class="flex items-start gap-3 font-semibold"><input class="mt-1" type="checkbox" name="requires_identity_verification" value="1" @checked(old('requires_identity_verification', $accountType->requires_identity_verification ?? true))> Requires identity verification</label>
-            <label class="flex items-start gap-3 font-semibold"><input class="mt-1" type="checkbox" name="active" value="1" @checked(old('active', $accountType->active ?? true))> Active (available to new registrations)</label>
-
-            <div class="flex gap-3">
-                <button class="rounded-lg bg-gold-400 px-6 py-3 font-bold text-navy-900 hover:bg-gold-500">Save</button>
-                <a class="rounded-lg border border-slate-300 px-6 py-3 font-bold" href="{{ route('admin.account-types.index') }}">Cancel</a>
-            </div>
-        </form>
-    </div>
+        <div class="flex flex-wrap gap-3 border-t border-line pt-6">
+            <x-ui.button variant="primary" data-loading-text="Saving…">Save account type</x-ui.button>
+            <x-ui.button :href="route('admin.account-types.index')" variant="ghost">Cancel</x-ui.button>
+        </div>
+    </form>
 </x-layouts.admin>

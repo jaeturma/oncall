@@ -2,10 +2,12 @@
 
 namespace App\Services;
 
+use App\Enums\AvailabilityStatus;
 use App\Enums\UserRole;
 use App\Enums\UserStatus;
 use App\Enums\VerificationStatus;
 use App\Models\Municipality;
+use App\Models\ProviderDocument;
 use App\Models\ProviderProfile;
 use App\Models\Province;
 use App\Models\User;
@@ -27,7 +29,7 @@ class ProviderSearchService
         [$originLatitude, $originLongitude] = $this->originCoordinates($filters);
 
         $profiles = ProviderProfile::query()
-            ->select(['id', 'user_id', 'province_id', 'municipality_id', 'available_now', 'verification_status', 'rating_cached', 'completed_jobs_cached'])
+            ->select(['id', 'user_id', 'province_id', 'municipality_id', 'available_now', 'availability_status', 'verification_status', 'rating_cached', 'completed_jobs_cached'])
             ->with([
                 'province:id,name',
                 'municipality:id,province_id,name,latitude,longitude',
@@ -52,8 +54,19 @@ class ProviderSearchService
                     });
             })
             ->when(isset($filters['municipality_id']), fn (Builder $query) => $query->where('municipality_id', $filters['municipality_id']))
-            ->get()
-            ->each(function (ProviderProfile $profile) use ($originLatitude, $originLongitude): void {
+            ->when(! empty($filters['available_only']), fn (Builder $query) => $query->where('availability_status', AvailabilityStatus::Available))
+            ->when(isset($filters['min_rating']), fn (Builder $query) => $query->where('rating_cached', '>=', $filters['min_rating']))
+            ->get();
+
+        $userIds = $profiles->pluck('user_id')->unique()->values()->all();
+        $verifiedTypes = ProviderDocument::verifiedTypesByUser($userIds);
+        $contactVerification = User::contactVerificationByIds($userIds);
+
+        $profiles = $profiles
+            ->each(function (ProviderProfile $profile) use ($originLatitude, $originLongitude, $verifiedTypes, $contactVerification): void {
+                $profile->verified_document_types = $verifiedTypes->get($profile->user_id, []);
+                $profile->mobile_verified = $contactVerification->get($profile->user_id)['mobile'] ?? false;
+                $profile->email_verified = $contactVerification->get($profile->user_id)['email'] ?? false;
                 $profile->distance_km = $this->distanceEstimator->kilometersBetween(
                     $originLatitude,
                     $originLongitude,
@@ -61,13 +74,7 @@ class ProviderSearchService
                     $profile->municipality->longitude !== null ? (float) $profile->municipality->longitude : null,
                 );
             })
-            ->sortBy([
-                fn (ProviderProfile $a, ProviderProfile $b) => $b->available_now <=> $a->available_now,
-                fn (ProviderProfile $a, ProviderProfile $b) => ($a->distance_km ?? PHP_FLOAT_MAX) <=> ($b->distance_km ?? PHP_FLOAT_MAX),
-                fn (ProviderProfile $a, ProviderProfile $b) => $b->rating_cached <=> $a->rating_cached,
-                fn (ProviderProfile $a, ProviderProfile $b) => $b->completed_jobs_cached <=> $a->completed_jobs_cached,
-                fn (ProviderProfile $a, ProviderProfile $b) => $a->id <=> $b->id,
-            ])
+            ->sortBy($this->sortComparators($filters['sort'] ?? null))
             ->values();
 
         $page = LengthAwarePaginator::resolveCurrentPage();
@@ -79,6 +86,30 @@ class ProviderSearchService
             $page,
             ['path' => $request->url(), 'query' => $request->query()],
         );
+    }
+
+    /**
+     * Comparator chain for the results list. The default ("recommended")
+     * order is unchanged from before availability/rating/distance sort
+     * options existed: available providers first, then nearest, then
+     * highest rated. Explicit "rating" or "nearest" sorts re-prioritize one
+     * of those signals while keeping the rest as tie-breakers.
+     *
+     * @return list<callable(ProviderProfile, ProviderProfile): int>
+     */
+    private function sortComparators(?string $sort): array
+    {
+        $availability = fn (ProviderProfile $a, ProviderProfile $b): int => $a->availability_status->rank() <=> $b->availability_status->rank();
+        $distance = fn (ProviderProfile $a, ProviderProfile $b): int => ($a->distance_km ?? PHP_FLOAT_MAX) <=> ($b->distance_km ?? PHP_FLOAT_MAX);
+        $rating = fn (ProviderProfile $a, ProviderProfile $b): int => $b->rating_cached <=> $a->rating_cached;
+        $completed = fn (ProviderProfile $a, ProviderProfile $b): int => $b->completed_jobs_cached <=> $a->completed_jobs_cached;
+        $id = fn (ProviderProfile $a, ProviderProfile $b): int => $a->id <=> $b->id;
+
+        return match ($sort) {
+            'rating' => [$rating, $availability, $distance, $completed, $id],
+            'nearest' => [$distance, $availability, $rating, $completed, $id],
+            default => [$availability, $distance, $rating, $completed, $id],
+        };
     }
 
     /**

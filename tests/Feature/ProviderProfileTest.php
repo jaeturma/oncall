@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\AvailabilityStatus;
 use App\Models\Municipality;
 use App\Models\ProviderProfile;
 use App\Models\Province;
@@ -56,18 +57,25 @@ class ProviderProfileTest extends TestCase
 
     public function test_profile_owner_toggles_availability(): void
     {
-        $profile = ProviderProfile::factory()->create(['available_now' => false]);
-        $this->actingAs($profile->user)->patch(route('provider.availability.update', $profile), ['available_now' => true])->assertRedirect();
-        $this->assertDatabaseHas('provider_profiles', ['id' => $profile->id, 'available_now' => true]);
+        $profile = ProviderProfile::factory()->offline()->create();
+        $this->actingAs($profile->user)->patch(route('provider.availability.update', $profile), ['availability_status' => AvailabilityStatus::Available->value])->assertRedirect();
+        $this->assertDatabaseHas('provider_profiles', ['id' => $profile->id, 'availability_status' => AvailabilityStatus::Available->value, 'available_now' => true]);
+    }
+
+    public function test_profile_owner_sets_a_richer_availability_status(): void
+    {
+        $profile = ProviderProfile::factory()->available()->create();
+        $this->actingAs($profile->user)->patch(route('provider.availability.update', $profile), ['availability_status' => AvailabilityStatus::ByAppointment->value])->assertRedirect();
+        $this->assertDatabaseHas('provider_profiles', ['id' => $profile->id, 'availability_status' => AvailabilityStatus::ByAppointment->value, 'available_now' => false]);
     }
 
     public function test_provider_cannot_toggle_another_providers_availability(): void
     {
-        $profile = ProviderProfile::factory()->create(['available_now' => false]);
+        $profile = ProviderProfile::factory()->offline()->create();
         $otherProvider = User::factory()->serviceProvider()->create();
 
         $this->actingAs($otherProvider)
-            ->patch(route('provider.availability.update', $profile), ['available_now' => true])
+            ->patch(route('provider.availability.update', $profile), ['availability_status' => AvailabilityStatus::Available->value])
             ->assertForbidden();
 
         $this->assertDatabaseHas('provider_profiles', ['id' => $profile->id, 'available_now' => false]);

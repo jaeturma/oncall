@@ -1,1 +1,8 @@
-<x-layouts.public title="Reset password"><form class="mx-auto grid max-w-md gap-4 px-6 py-16" method="POST" action="{{ route('password.email') }}">@csrf<h1 class="text-3xl font-black">Reset password</h1><label>Email<input class="mt-1 w-full rounded-lg border p-3" type="email" name="email"></label><button class="rounded-lg bg-navy-900 p-3 font-bold text-white">Email reset link</button></form></x-layouts.public>
+<x-layouts.auth title="Reset password" heading="Reset your password" intro="Enter the email address on your account and we'll send you a link to choose a new password.">
+    <form class="card card-pad grid gap-5 sm:p-8" method="POST" action="{{ route('password.email') }}">
+        @csrf
+        <x-form.input name="email" type="email" label="Email address" autocomplete="email" inputmode="email" placeholder="you@example.com" required autofocus />
+        <x-ui.button variant="dark" size="lg" block data-loading-text="Sending…">Email me a reset link</x-ui.button>
+    </form>
+    <p class="mt-6 text-center text-sm text-ink-secondary">Remembered it? <a class="font-semibold text-navy-800 hover:underline" href="{{ route('login') }}">Back to sign in</a></p>
+</x-layouts.auth>

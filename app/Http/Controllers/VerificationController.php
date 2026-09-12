@@ -7,6 +7,7 @@ use App\Enums\UserRole;
 use App\Enums\VerificationStatus;
 use App\Http\Requests\StoreProviderDocumentRequest;
 use App\Models\ProviderDocument;
+use App\Services\MobileVerificationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -17,11 +18,12 @@ use Throwable;
 
 class VerificationController extends Controller
 {
-    public function index(Request $request): View
+    public function index(Request $request, MobileVerificationService $mobileVerification): View
     {
         return view('verification.index', [
             'documentTypes' => DocumentType::cases(),
             'documents' => $request->user()->providerDocuments()->latest()->get(),
+            'hasPendingMobileCode' => $mobileVerification->hasPendingCode($request->user()),
         ]);
     }
 

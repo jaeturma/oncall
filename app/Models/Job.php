@@ -51,6 +51,17 @@ class Job extends Model
         return $this->hasMany(JobMessage::class);
     }
 
+    /** Most recent message on this job, for inbox previews. */
+    public function latestMessage(): HasOne
+    {
+        return $this->hasOne(JobMessage::class)->latestOfMany();
+    }
+
+    public function otherParticipant(User $viewer): User
+    {
+        return $viewer->id === $this->service_finder_id ? $this->provider : $this->serviceFinder;
+    }
+
     public function reviews(): HasMany
     {
         return $this->hasMany(Review::class);
