@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Admin;
 use App\Enums\EnforcementCaseStatus;
 use App\Enums\JobStatus;
 use App\Enums\ReportStatus;
-use App\Enums\UserRole;
 use App\Enums\VerificationStatus;
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
@@ -26,7 +25,7 @@ class DashboardController extends Controller
      */
     public function __invoke(Request $request): View
     {
-        abort_unless($request->user()->role === UserRole::Admin, 403);
+        abort_unless($request->user()->canAccessAdmin(), 403);
 
         return view('admin.dashboard', ['metrics' => [
             'users' => User::count(),

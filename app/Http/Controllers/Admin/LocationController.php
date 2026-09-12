@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Models\Municipality;
 use App\Models\Province;
@@ -19,7 +18,7 @@ class LocationController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        abort_unless($request->user()->role === UserRole::Admin, 403);
+        abort_unless($request->user()->canAccessAdmin(), 403);
         $data = $request->validate(['province' => ['required', 'max:255'], 'municipality' => ['required', 'max:255'], 'type' => ['required', 'in:municipality,city']]);
         $province = Province::firstOrCreate(['name' => $data['province']]);
         Municipality::firstOrCreate(['province_id' => $province->id, 'name' => $data['municipality']], ['type' => $data['type']]);

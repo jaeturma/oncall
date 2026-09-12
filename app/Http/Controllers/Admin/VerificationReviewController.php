@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Enums\UserRole;
 use App\Enums\VerificationStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ReviewVerificationRequest;
@@ -17,7 +16,7 @@ class VerificationReviewController extends Controller
 {
     public function index(Request $request): View
     {
-        abort_unless($request->user()->role === UserRole::Admin, 403);
+        abort_unless($request->user()->canAccessAdmin(), 403);
 
         return view('admin.verifications.index', [
             'documents' => ProviderDocument::query()->with('user')->where('status', VerificationStatus::Submitted)->oldest()->paginate(20),

@@ -113,6 +113,7 @@ class JobEarningsTest extends TestCase
 
         $this->actingAs($provider)->patch(route('staff.job-payments.update', JobPayment::sole()), ['decision' => 'release'])->assertForbidden();
         $this->actingAs(User::factory()->create(['role' => UserRole::Cashier]))->patch(route('staff.job-payments.update', JobPayment::sole()), ['decision' => 'release'])->assertForbidden();
+        $this->actingAs(User::factory()->create(['role' => UserRole::Budget]))->patch(route('staff.job-payments.update', JobPayment::sole()), ['decision' => 'release'])->assertForbidden();
     }
 
     public function test_reversing_a_released_earning_removes_it_from_the_balance(): void

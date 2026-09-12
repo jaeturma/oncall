@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Enums\DocumentType;
-use App\Enums\UserRole;
 use App\Enums\VerificationStatus;
 use App\Http\Requests\StoreProviderDocumentRequest;
 use App\Models\ProviderDocument;
@@ -53,7 +52,7 @@ class VerificationController extends Controller
 
     public function download(Request $request, ProviderDocument $providerDocument): StreamedResponse
     {
-        abort_unless($providerDocument->user_id === $request->user()->id || $request->user()->role === UserRole::Admin, 404);
+        abort_unless($providerDocument->user_id === $request->user()->id || $request->user()->canAccessAdmin(), 404);
 
         return Storage::disk('local')->download($providerDocument->private_path);
     }

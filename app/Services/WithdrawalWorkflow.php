@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\Enums\UserRole;
 use App\Enums\WalletTransactionType;
 use App\Enums\WithdrawalStatus;
 use App\Models\AuditLog;
@@ -73,7 +72,7 @@ class WithdrawalWorkflow
             }
 
             $requiredRole = $locked->status->actingRole();
-            if ($actor->role !== UserRole::Admin && $actor->role !== $requiredRole) {
+            if (! $actor->canAccessAdmin() && $actor->role !== $requiredRole) {
                 throw new ConflictHttpException('This step must be handled by '.$requiredRole?->value.'.');
             }
 

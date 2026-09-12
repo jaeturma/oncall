@@ -63,6 +63,15 @@ class AppServiceProvider extends ServiceProvider
 
         Gate::define('view-finance-reports', fn (User $user): bool => in_array($user->role, [UserRole::Admin, UserRole::Accounting], true));
 
+        // Central marketplace vs. back-office boundary (Phase B). Defined
+        // against a nullable user so these are also safe to evaluate for a
+        // guest (e.g. if ever checked before the `auth` middleware runs),
+        // rather than only ever being reachable behind existing auth checks.
+        Gate::define('use-marketplace', fn (?User $user): bool => $user?->canUseMarketplace() ?? false);
+        Gate::define('use-mobile', fn (?User $user): bool => $user?->canUseMobile() ?? false);
+        Gate::define('access-admin', fn (?User $user): bool => $user?->canAccessAdmin() ?? false);
+        Gate::define('access-back-office', fn (?User $user): bool => $user?->canAccessBackOffice() ?? false);
+
         // Laravel's slim skeleton has no EventServiceProvider to auto-wire
         // this, so it's registered explicitly: User implements
         // MustVerifyEmail, and this sends the verification email whenever a

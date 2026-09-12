@@ -147,6 +147,31 @@ class User extends Authenticatable implements MustVerifyEmail
         return ! config('oncall.service_requests.require_identity_verification') || $this->isIdentityVerified();
     }
 
+    /**
+     * Marketplace vs. back-office role boundary (Phase B). These delegate to
+     * {@see UserRole} so the actual role sets are defined in exactly one
+     * place; call these instead of comparing `$user->role` inline.
+     */
+    public function canUseMarketplace(): bool
+    {
+        return $this->role?->canUseMarketplace() ?? false;
+    }
+
+    public function canUseMobile(): bool
+    {
+        return $this->role?->canUseMobile() ?? false;
+    }
+
+    public function canAccessAdmin(): bool
+    {
+        return $this->role?->canAccessAdmin() ?? false;
+    }
+
+    public function canAccessBackOffice(): bool
+    {
+        return $this->role?->canAccessBackOffice() ?? false;
+    }
+
     public function isMobileVerified(): bool
     {
         return $this->phone_verified_at !== null;

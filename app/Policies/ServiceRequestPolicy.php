@@ -16,7 +16,7 @@ class ServiceRequestPolicy
      */
     public function viewAny(User $user): bool
     {
-        return in_array($user->role, [UserRole::ServiceFinder, UserRole::ServiceProvider], true);
+        return $user->canUseMarketplace();
     }
 
     /**

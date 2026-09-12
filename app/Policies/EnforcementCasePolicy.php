@@ -2,7 +2,6 @@
 
 namespace App\Policies;
 
-use App\Enums\UserRole;
 use App\Models\EnforcementCase;
 use App\Models\User;
 
@@ -13,7 +12,7 @@ class EnforcementCasePolicy
      */
     public function viewAny(User $user): bool
     {
-        return $user->role === UserRole::Admin;
+        return $user->canAccessAdmin();
     }
 
     /**
@@ -21,7 +20,7 @@ class EnforcementCasePolicy
      */
     public function view(User $user, EnforcementCase $enforcementCase): bool
     {
-        return $user->role === UserRole::Admin || $enforcementCase->user_id === $user->id;
+        return $user->canAccessAdmin() || $enforcementCase->user_id === $user->id;
     }
 
     /**
@@ -29,7 +28,7 @@ class EnforcementCasePolicy
      */
     public function create(User $user): bool
     {
-        return $user->role === UserRole::Admin;
+        return $user->canAccessAdmin();
     }
 
     /**
@@ -37,7 +36,7 @@ class EnforcementCasePolicy
      */
     public function update(User $user, EnforcementCase $enforcementCase): bool
     {
-        return $user->role === UserRole::Admin;
+        return $user->canAccessAdmin();
     }
 
     /**

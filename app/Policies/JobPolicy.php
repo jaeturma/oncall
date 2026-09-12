@@ -3,7 +3,6 @@
 namespace App\Policies;
 
 use App\Enums\RestrictedCapability;
-use App\Enums\UserRole;
 use App\Models\Job;
 use App\Models\User;
 
@@ -14,7 +13,7 @@ class JobPolicy
      */
     public function viewAny(User $user): bool
     {
-        return in_array($user->role, [UserRole::ServiceFinder, UserRole::ServiceProvider], true);
+        return $user->canUseMarketplace();
     }
 
     /**

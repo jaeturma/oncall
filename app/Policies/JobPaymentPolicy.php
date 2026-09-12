@@ -32,6 +32,6 @@ class JobPaymentPolicy
 
     public function viewQueue(User $user): bool
     {
-        return in_array($user->role, [UserRole::Admin, UserRole::Accounting, UserRole::Budget, UserRole::Cashier], true);
+        return $user->canAccessBackOffice();
     }
 }

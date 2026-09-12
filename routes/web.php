@@ -67,23 +67,16 @@ Route::middleware('guest')->group(function () {
     Route::get('/reset-password/{token}', [PasswordResetController::class, 'reset'])->name('password.reset');
     Route::post('/reset-password', [PasswordResetController::class, 'update'])->name('password.update');
 });
+
 Route::middleware(['auth', 'account.active'])->group(function () {
+    // Shared / marketplace routes (customer, provider; sponsor is a
+    // relationship on these same roles, not a separate route surface).
     Route::get('/dashboard', DashboardController::class)->name('dashboard');
     Route::get('/messages', [MessagesController::class, 'index'])->name('messages.index');
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
     Route::patch('/notifications/read-all', [NotificationController::class, 'readAll'])->name('notifications.read-all');
     Route::patch('/notifications/{notification}/read', [NotificationController::class, 'read'])->name('notifications.read');
     Route::post('/logout', LogoutController::class)->name('logout');
-    Route::get('/admin/catalog', [ServiceCatalogController::class, 'index'])->name('admin.catalog');
-    Route::get('/admin', AdminDashboardController::class)->name('admin.dashboard');
-    Route::get('/admin/users', [AdminUserController::class, 'index'])->name('admin.users.index');
-    Route::get('/admin/providers', [AdminProviderController::class, 'index'])->name('admin.providers.index');
-    Route::get('/admin/jobs', [AdminJobController::class, 'index'])->name('admin.jobs.index');
-    Route::get('/admin/reports', [AdminReportController::class, 'index'])->name('admin.reports.index');
-    Route::get('/admin/audit-logs', [AuditLogController::class, 'index'])->name('admin.audit-logs.index');
-    Route::post('/admin/categories', [ServiceCatalogController::class, 'storeCategory'])->name('admin.categories.store');
-    Route::post('/admin/services', [ServiceCatalogController::class, 'storeService'])->name('admin.services.store');
-    Route::post('/admin/locations', [LocationController::class, 'store'])->name('admin.locations.store');
     Route::get('/provider/dashboard', [ProfileController::class, 'index'])->name('provider.dashboard');
     Route::resource('/provider/profiles', ProfileController::class)->only(['create', 'store', 'edit', 'update'])->parameters(['profiles' => 'provider_profile'])->names('provider.profiles');
     Route::patch('/provider/profiles/{provider_profile}/availability', AvailabilityController::class)->name('provider.availability.update');
@@ -94,8 +87,6 @@ Route::middleware(['auth', 'account.active'])->group(function () {
     Route::post('/verification/email/resend', SendEmailVerificationController::class)->middleware('throttle:6,1')->name('verification.send');
     Route::post('/verification/mobile', [MobileVerificationController::class, 'send'])->middleware('throttle:5,1')->name('verification.mobile.send');
     Route::post('/verification/mobile/confirm', [MobileVerificationController::class, 'verify'])->middleware('throttle:10,1')->name('verification.mobile.verify');
-    Route::get('/admin/verifications', [VerificationReviewController::class, 'index'])->name('admin.verifications.index');
-    Route::patch('/admin/verifications/{provider_document}', [VerificationReviewController::class, 'update'])->name('admin.verifications.update');
     Route::get('/service-requests', [ServiceRequestController::class, 'index'])->name('service-requests.index');
     Route::get('/providers/{provider_profile}/service-requests/create', [ServiceRequestController::class, 'create'])->name('service-requests.create');
     Route::post('/providers/{provider_profile}/service-requests', [ServiceRequestController::class, 'store'])->middleware('throttle:10,1')->name('service-requests.store');
@@ -111,34 +102,71 @@ Route::middleware(['auth', 'account.active'])->group(function () {
     Route::post('/jobs/{job}/reviews', [ReviewController::class, 'store'])->middleware('throttle:5,1')->name('jobs.reviews.store');
     Route::post('/jobs/{job}/disputes', [DisputeController::class, 'store'])->middleware('throttle:5,1')->name('disputes.store');
     Route::patch('/disputes/{dispute}/withdraw', [DisputeController::class, 'withdraw'])->name('disputes.withdraw');
-    Route::get('/admin/disputes', [AdminDisputeController::class, 'index'])->name('admin.disputes.index');
-    Route::get('/admin/disputes/{dispute}', [AdminDisputeController::class, 'show'])->name('admin.disputes.show');
-    Route::patch('/admin/disputes/{dispute}', [AdminDisputeController::class, 'update'])->name('admin.disputes.update');
     Route::patch('/job-payments/{job_payment}/confirm', [JobPaymentController::class, 'confirm'])->middleware('throttle:10,1')->name('job-payments.confirm');
-    Route::get('/staff/job-payments', [JobPaymentReleaseController::class, 'index'])->name('staff.job-payments.index');
-    Route::patch('/staff/job-payments/{job_payment}', [JobPaymentReleaseController::class, 'update'])->name('staff.job-payments.update');
     Route::get('/wallet', [WalletController::class, 'index'])->name('wallet.index');
     Route::get('/wallet/withdrawals', [WithdrawalController::class, 'index'])->name('withdrawals.index');
     Route::post('/wallet/withdrawals', [WithdrawalController::class, 'store'])->middleware('throttle:6,1')->name('withdrawals.store');
     Route::patch('/wallet/withdrawals/{withdrawal}/cancel', [WithdrawalController::class, 'cancel'])->name('withdrawals.cancel');
     Route::get('/sponsor/referrals', [SponsorController::class, 'index'])->name('sponsor.referrals');
-    Route::get('/staff/withdrawals', [WithdrawalReviewController::class, 'index'])->name('staff.withdrawals.index');
-    Route::patch('/staff/withdrawals/{withdrawal}', [WithdrawalReviewController::class, 'update'])->name('staff.withdrawals.update');
-    Route::resource('/admin/account-types', AccountTypeController::class)->except(['show', 'destroy'])->parameters(['account-types' => 'account_type'])->names('admin.account-types');
-    Route::patch('/admin/account-types/{account_type}/toggle', [AccountTypeController::class, 'toggle'])->name('admin.account-types.toggle');
-    Route::get('/admin/commissions', [AdminCommissionController::class, 'index'])->name('admin.commissions.index');
-    Route::patch('/admin/commissions/{commission}', [AdminCommissionController::class, 'update'])->name('admin.commissions.update');
-    Route::get('/admin/finance', [FinanceReportController::class, 'index'])->name('admin.finance.index');
-    Route::get('/admin/finance/ledger', [FinanceReportController::class, 'ledger'])->name('admin.finance.ledger');
-    Route::get('/admin/finance/export', [FinanceReportController::class, 'export'])->name('admin.finance.export');
-    Route::get('/admin/finance/users/{user}/statement', [FinanceReportController::class, 'userStatement'])->name('admin.finance.statement');
     Route::get('/enforcement-cases', [EnforcementCaseController::class, 'index'])->name('enforcement-cases.index');
     Route::get('/enforcement-cases/{enforcement_case}', [EnforcementCaseController::class, 'show'])->name('enforcement-cases.show');
     Route::post('/enforcement-cases/{enforcement_case}/appeal', EnforcementAppealController::class)->name('enforcement-cases.appeal');
-    Route::get('/admin/enforcement', [AdminEnforcementCaseController::class, 'index'])->name('admin.enforcement.index');
-    Route::get('/admin/enforcement/{enforcement_case}', [AdminEnforcementCaseController::class, 'show'])->name('admin.enforcement.show');
-    Route::patch('/admin/enforcement/{enforcement_case}', [AdminEnforcementCaseController::class, 'update'])->name('admin.enforcement.update');
-    Route::patch('/admin/enforcement/{enforcement_case}/resolve', ResolvedEnforcementCaseController::class)->name('admin.enforcement.resolve');
-    Route::patch('/admin/enforcement/{enforcement_case}/appeal', ReviewedEnforcementAppealController::class)->name('admin.enforcement.appeal.update');
+
+    // Web administration portal (Admin role only). `can:access-admin` is a
+    // route-group-level backstop on top of each action's own authorization
+    // (Gate::authorize / FormRequest::authorize / abort_unless) — it does not
+    // replace those, it exists so a future /admin route added without its
+    // own check still isn't reachable by a non-admin account.
+    Route::prefix('admin')->name('admin.')->middleware('can:access-admin')->group(function () {
+        Route::get('/catalog', [ServiceCatalogController::class, 'index'])->name('catalog');
+        Route::get('/', AdminDashboardController::class)->name('dashboard');
+        Route::get('/users', [AdminUserController::class, 'index'])->name('users.index');
+        Route::get('/providers', [AdminProviderController::class, 'index'])->name('providers.index');
+        Route::get('/jobs', [AdminJobController::class, 'index'])->name('jobs.index');
+        Route::get('/reports', [AdminReportController::class, 'index'])->name('reports.index');
+        Route::get('/audit-logs', [AuditLogController::class, 'index'])->name('audit-logs.index');
+        Route::post('/categories', [ServiceCatalogController::class, 'storeCategory'])->name('categories.store');
+        Route::post('/services', [ServiceCatalogController::class, 'storeService'])->name('services.store');
+        Route::post('/locations', [LocationController::class, 'store'])->name('locations.store');
+        Route::get('/verifications', [VerificationReviewController::class, 'index'])->name('verifications.index');
+        Route::patch('/verifications/{provider_document}', [VerificationReviewController::class, 'update'])->name('verifications.update');
+        Route::get('/disputes', [AdminDisputeController::class, 'index'])->name('disputes.index');
+        Route::get('/disputes/{dispute}', [AdminDisputeController::class, 'show'])->name('disputes.show');
+        Route::patch('/disputes/{dispute}', [AdminDisputeController::class, 'update'])->name('disputes.update');
+        Route::resource('/account-types', AccountTypeController::class)->except(['show', 'destroy'])->parameters(['account-types' => 'account_type'])->names('account-types');
+        Route::patch('/account-types/{account_type}/toggle', [AccountTypeController::class, 'toggle'])->name('account-types.toggle');
+        Route::get('/enforcement', [AdminEnforcementCaseController::class, 'index'])->name('enforcement.index');
+        Route::get('/enforcement/{enforcement_case}', [AdminEnforcementCaseController::class, 'show'])->name('enforcement.show');
+        Route::patch('/enforcement/{enforcement_case}', [AdminEnforcementCaseController::class, 'update'])->name('enforcement.update');
+        Route::patch('/enforcement/{enforcement_case}/resolve', ResolvedEnforcementCaseController::class)->name('enforcement.resolve');
+        Route::patch('/enforcement/{enforcement_case}/appeal', ReviewedEnforcementAppealController::class)->name('enforcement.appeal.update');
+    });
+
+    // Commissions and finance reports are the one part of the admin area
+    // Accounting can also reach (CommissionPolicy::REVIEWERS / the
+    // `view-finance-reports` gate both allow Admin + Accounting) — a
+    // sibling group under the same /admin prefix, gated with that existing,
+    // already-correct permission instead of the Admin-only one above.
+    Route::prefix('admin')->name('admin.')->middleware('can:view-finance-reports')->group(function () {
+        Route::get('/commissions', [AdminCommissionController::class, 'index'])->name('commissions.index');
+        Route::patch('/commissions/{commission}', [AdminCommissionController::class, 'update'])->name('commissions.update');
+        Route::get('/finance', [FinanceReportController::class, 'index'])->name('finance.index');
+        Route::get('/finance/ledger', [FinanceReportController::class, 'ledger'])->name('finance.ledger');
+        Route::get('/finance/export', [FinanceReportController::class, 'export'])->name('finance.export');
+        Route::get('/finance/users/{user}/statement', [FinanceReportController::class, 'userStatement'])->name('finance.statement');
+    });
+
+    // Back-office finance queues (Admin, Accounting, Budget, Cashier). Same
+    // backstop principle as above, using the broader back-office gate since
+    // these queues are shared across all four staff roles; each route's own
+    // policy/FormRequest still enforces exactly which staff role may act on
+    // a given step.
+    Route::prefix('staff')->name('staff.')->middleware('can:access-back-office')->group(function () {
+        Route::get('/job-payments', [JobPaymentReleaseController::class, 'index'])->name('job-payments.index');
+        Route::patch('/job-payments/{job_payment}', [JobPaymentReleaseController::class, 'update'])->name('job-payments.update');
+        Route::get('/withdrawals', [WithdrawalReviewController::class, 'index'])->name('withdrawals.index');
+        Route::patch('/withdrawals/{withdrawal}', [WithdrawalReviewController::class, 'update'])->name('withdrawals.update');
+    });
 });
+
 Route::get('/health', HealthController::class)->name('health');

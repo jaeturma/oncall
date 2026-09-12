@@ -3,7 +3,6 @@
 namespace App\Policies;
 
 use App\Enums\RestrictedCapability;
-use App\Enums\UserRole;
 use App\Enums\UserStatus;
 use App\Enums\WithdrawalStatus;
 use App\Models\User;
@@ -11,8 +10,6 @@ use App\Models\Withdrawal;
 
 class WithdrawalPolicy
 {
-    private const STAFF = [UserRole::Admin, UserRole::Accounting, UserRole::Budget, UserRole::Cashier];
-
     public function viewAny(User $user): bool
     {
         return true;
@@ -20,7 +17,7 @@ class WithdrawalPolicy
 
     public function view(User $user, Withdrawal $withdrawal): bool
     {
-        return $withdrawal->user_id === $user->id || in_array($user->role, self::STAFF, true);
+        return $withdrawal->user_id === $user->id || $user->canAccessBackOffice();
     }
 
     public function create(User $user): bool
@@ -42,11 +39,11 @@ class WithdrawalPolicy
             return false;
         }
 
-        return $user->role === UserRole::Admin || $user->role === $withdrawal->status->actingRole();
+        return $user->canAccessAdmin() || $user->role === $withdrawal->status->actingRole();
     }
 
     public function viewQueue(User $user): bool
     {
-        return in_array($user->role, self::STAFF, true);
+        return $user->canAccessBackOffice();
     }
 }

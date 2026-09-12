@@ -3,7 +3,6 @@
 namespace App\Policies;
 
 use App\Enums\JobStatus;
-use App\Enums\UserRole;
 use App\Models\Dispute;
 use App\Models\Job;
 use App\Models\User;
@@ -12,12 +11,12 @@ class DisputePolicy
 {
     public function viewAny(User $user): bool
     {
-        return $user->role === UserRole::Admin;
+        return $user->canAccessAdmin();
     }
 
     public function view(User $user, Dispute $dispute): bool
     {
-        return $user->role === UserRole::Admin
+        return $user->canAccessAdmin()
             || in_array($user->id, [$dispute->job->service_finder_id, $dispute->job->provider_id], true);
     }
 
@@ -36,6 +35,6 @@ class DisputePolicy
     /** Admin starting review or resolving a dispute. */
     public function review(User $user, Dispute $dispute): bool
     {
-        return $user->role === UserRole::Admin && $dispute->isOpen();
+        return $user->canAccessAdmin() && $dispute->isOpen();
     }
 }

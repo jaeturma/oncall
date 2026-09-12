@@ -2,7 +2,6 @@
 
 namespace App\Policies;
 
-use App\Enums\UserRole;
 use App\Models\User;
 use App\Models\UserReport;
 
@@ -13,7 +12,7 @@ class UserReportPolicy
      */
     public function viewAny(User $user): bool
     {
-        return $user->role === UserRole::Admin;
+        return $user->canAccessAdmin();
     }
 
     /**
@@ -21,7 +20,7 @@ class UserReportPolicy
      */
     public function view(User $user, UserReport $userReport): bool
     {
-        return $user->role === UserRole::Admin || $userReport->reporter_id === $user->id;
+        return $user->canAccessAdmin() || $userReport->reporter_id === $user->id;
     }
 
     /**
@@ -29,7 +28,7 @@ class UserReportPolicy
      */
     public function create(User $user): bool
     {
-        return in_array($user->role, [UserRole::ServiceFinder, UserRole::ServiceProvider], true);
+        return $user->canUseMarketplace();
     }
 
     /**

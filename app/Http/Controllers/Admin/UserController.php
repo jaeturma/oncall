@@ -13,7 +13,7 @@ class UserController extends Controller
 {
     public function index(Request $request): View
     {
-        abort_unless($request->user()->role === UserRole::Admin, 403);
+        abort_unless($request->user()->canAccessAdmin(), 403);
         $role = UserRole::tryFrom($request->string('role')->value());
         $status = UserStatus::tryFrom($request->string('status')->value());
         $search = $request->string('q')->trim()->value();
