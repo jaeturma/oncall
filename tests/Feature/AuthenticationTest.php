@@ -33,4 +33,30 @@ class AuthenticationTest extends TestCase
         $this->post(route('register'), ['name' => 'Intruder', 'email' => 'intruder@example.com', 'role' => 'ADMIN', 'password' => 'password123', 'password_confirmation' => 'password123'])->assertSessionHasErrors('role');
         $this->assertDatabaseMissing('users', ['email' => 'intruder@example.com']);
     }
+
+    /** Phase K: registration had no rate limit at all, unlike login/forgot-password right next to it. */
+    public function test_registration_is_rate_limited(): void
+    {
+        $sawTooManyRequests = false;
+        for ($attempt = 1; $attempt <= 15 && ! $sawTooManyRequests; $attempt++) {
+            $response = $this->post(route('register'), ['name' => 'Spammer', 'email' => "spammer{$attempt}@example.com", 'role' => 'SERVICE_FINDER', 'password' => 'password123', 'password_confirmation' => 'password123']);
+            $sawTooManyRequests = $response->getStatusCode() === 429;
+        }
+
+        $this->assertTrue($sawTooManyRequests, 'Expected repeated registration attempts to eventually be rate limited.');
+    }
+
+    /** Phase K: submitting a password reset had no rate limit, unlike requesting one (forgot-password) right next to it. */
+    public function test_password_reset_submission_is_rate_limited(): void
+    {
+        $user = User::factory()->create();
+        $sawTooManyRequests = false;
+
+        for ($attempt = 1; $attempt <= 15 && ! $sawTooManyRequests; $attempt++) {
+            $response = $this->post(route('password.update'), ['token' => 'bad-token', 'email' => $user->email, 'password' => 'password123', 'password_confirmation' => 'password123']);
+            $sawTooManyRequests = $response->getStatusCode() === 429;
+        }
+
+        $this->assertTrue($sawTooManyRequests, 'Expected repeated password-reset submissions to eventually be rate limited.');
+    }
 }

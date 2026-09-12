@@ -61,11 +61,11 @@ Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthenticatedSessionController::class, 'create'])->name('login');
     Route::post('/login', [AuthenticatedSessionController::class, 'store'])->middleware('throttle:6,1');
     Route::get('/register', [RegisteredUserController::class, 'create'])->name('register');
-    Route::post('/register', [RegisteredUserController::class, 'store']);
+    Route::post('/register', [RegisteredUserController::class, 'store'])->middleware('throttle:6,1');
     Route::get('/forgot-password', [PasswordResetController::class, 'request'])->name('password.request');
     Route::post('/forgot-password', [PasswordResetController::class, 'email'])->name('password.email')->middleware('throttle:6,1');
     Route::get('/reset-password/{token}', [PasswordResetController::class, 'reset'])->name('password.reset');
-    Route::post('/reset-password', [PasswordResetController::class, 'update'])->name('password.update');
+    Route::post('/reset-password', [PasswordResetController::class, 'update'])->name('password.update')->middleware('throttle:6,1');
 });
 
 Route::middleware(['auth', 'account.active'])->group(function () {

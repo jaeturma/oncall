@@ -10,6 +10,7 @@ use App\Models\ProviderProfile;
 use App\Models\User;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -53,6 +54,25 @@ class VerificationTest extends TestCase
 
         $this->assertSame(1, ProviderDocument::whereBelongsTo($user)->count());
         Storage::disk('local')->assertDirectoryEmpty('/');
+    }
+
+    /**
+     * Phase K: Laravel's `local` disk defaults to `'serve' => true`, which
+     * auto-registers a public, unauthenticated `GET /storage/{path}` route
+     * (framework-level, outside routes/web.php) that would serve files
+     * straight from storage/app/private — bypassing this controller's
+     * ownership/admin check entirely. config/filesystems.php sets it back
+     * to false; this locks that in.
+     */
+    public function test_the_local_disk_has_no_public_serving_route(): void
+    {
+        $this->assertFalse(Route::has('storage.local'));
+
+        Storage::fake('local');
+        $document = ProviderDocument::factory()->create(['private_path' => 'verification-documents/1/secret-id.pdf']);
+        Storage::disk('local')->put($document->private_path, 'private identity document contents');
+
+        $this->get('/storage/'.$document->private_path)->assertNotFound();
     }
 
     public function test_document_download_is_limited_to_owner_and_admin(): void

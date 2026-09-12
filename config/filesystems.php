@@ -33,7 +33,13 @@ return [
         'local' => [
             'driver' => 'local',
             'root' => storage_path('app/private'),
-            'serve' => true,
+            // Deliberately false: this disk holds private verification
+            // documents (see VerificationController::store). Laravel's
+            // framework-registered `GET /storage/{path}` route this flag
+            // turns on is completely unauthenticated and bypasses
+            // VerificationController::download()'s ownership/admin check —
+            // every access to this disk must go through that controller.
+            'serve' => false,
             'throw' => false,
             'report' => false,
         ],
