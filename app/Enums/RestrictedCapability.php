@@ -9,5 +9,7 @@ enum RestrictedCapability: string
     case Messaging = 'MESSAGING';
     case ContactReveal = 'CONTACT_REVEAL';
     case NewBookings = 'NEW_BOOKINGS';
+    case Withdrawals = 'WITHDRAWALS';
+    case AvailabilityChanges = 'AVAILABILITY_CHANGES';
     case FullAccountAccess = 'FULL_ACCOUNT_ACCESS';
 }

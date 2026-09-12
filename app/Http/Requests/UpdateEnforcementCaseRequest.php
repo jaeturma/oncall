@@ -36,7 +36,7 @@ class UpdateEnforcementCaseRequest extends FormRequest
             'restricted_capabilities' => ['nullable', 'array'],
             'restricted_capabilities.*' => [Rule::enum(RestrictedCapability::class)],
             'duration_days' => ['nullable', 'integer', 'min:1', 'max:365'],
-            'resolution' => ['nullable', 'string', 'max:3000'],
+            'resolution' => ['required', 'string', 'max:3000'],
             'appeal_status' => ['nullable', Rule::enum(AppealStatus::class), Rule::notIn([AppealStatus::None->value, AppealStatus::Requested->value])],
         ];
     }

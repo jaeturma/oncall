@@ -6,11 +6,14 @@ use App\Enums\EnforcementAction;
 use App\Enums\RestrictedCapability;
 use App\Enums\UserRole;
 use App\Enums\UserStatus;
+use App\Enums\WalletTransactionType;
 use App\Models\AuditLog;
 use App\Models\EnforcementCase;
 use App\Models\Job;
+use App\Models\ProviderProfile;
 use App\Models\ServiceRequest;
 use App\Models\User;
+use App\Services\WalletLedger;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -49,6 +52,20 @@ class SafetyEnforcementTest extends TestCase
         $this->assertNull($case->fresh()->action);
     }
 
+    /** Accounting/Budget/Cashier are back-office too, but enforcement is Admin-only per ADR-001. */
+    public function test_unrelated_back_office_role_cannot_manage_enforcement_cases(): void
+    {
+        [, $provider] = $this->participantsAndJob();
+        $case = EnforcementCase::factory()->create(['user_id' => $provider->id]);
+
+        foreach ([UserRole::Accounting, UserRole::Budget, UserRole::Cashier] as $role) {
+            $staff = User::factory()->create(['role' => $role]);
+
+            $this->actingAs($staff)->patch(route('admin.enforcement.update', $case), $this->actionPayload(EnforcementAction::Warning))->assertForbidden();
+        }
+        $this->assertNull($case->fresh()->action);
+    }
+
     public function test_admin_must_apply_full_enforcement_ladder_and_every_step_is_audited(): void
     {
         [, $provider] = $this->participantsAndJob();
@@ -73,6 +90,18 @@ class SafetyEnforcementTest extends TestCase
         $this->assertSame(4, AuditLog::where('subject_id', $case->id)->where('event', 'enforcement.action_applied')->count());
     }
 
+    public function test_enforcement_action_requires_a_recorded_reason(): void
+    {
+        [, $provider] = $this->participantsAndJob();
+        $admin = User::factory()->admin()->create()->refresh();
+        $case = EnforcementCase::factory()->create(['user_id' => $provider->id]);
+        $payload = $this->actionPayload(EnforcementAction::Warning);
+        unset($payload['resolution']);
+
+        $this->actingAs($admin)->patch(route('admin.enforcement.update', $case), $payload)->assertSessionHasErrors('resolution');
+        $this->assertNull($case->fresh()->action);
+    }
+
     public function test_admin_cannot_skip_required_enforcement_step(): void
     {
         [, $provider] = $this->participantsAndJob();
@@ -94,6 +123,36 @@ class SafetyEnforcementTest extends TestCase
 
         $this->actingAs($finder)->post(route('jobs.messages.store', $job), ['type' => 'MESSAGE', 'body' => 'Blocked message'])->assertForbidden();
         $this->actingAs($finder)->get(route('jobs.show', $job))->assertOk()->assertDontSee($provider->email)->assertSee('Contact reveal is temporarily restricted');
+    }
+
+    public function test_targeted_restriction_blocks_withdrawals_without_a_full_suspension(): void
+    {
+        [$finder] = $this->participantsAndJob();
+        $admin = User::factory()->admin()->create()->refresh();
+        $case = EnforcementCase::factory()->create(['user_id' => $finder->id]);
+        app(WalletLedger::class)->post($finder, WalletTransactionType::Adjustment, '500.00', description: 'test funding');
+        $this->advanceToRestriction($admin, $case, [RestrictedCapability::Withdrawals->value]);
+
+        $this->actingAs($finder)
+            ->post(route('withdrawals.store'), ['amount' => '100.00', 'payout_method' => 'GCash', 'payout_reference' => '0917'])
+            ->assertForbidden();
+
+        // The restriction is targeted: the account is merely Restricted, not Suspended, and other actions still work.
+        $this->assertSame(UserStatus::Restricted, $finder->fresh()->status);
+        $this->assertDatabaseCount('withdrawals', 0);
+    }
+
+    public function test_targeted_restriction_blocks_provider_availability_changes(): void
+    {
+        $provider = User::factory()->serviceProvider()->create()->refresh();
+        $profile = ProviderProfile::factory()->for($provider, 'user')->create();
+        $admin = User::factory()->admin()->create()->refresh();
+        $case = EnforcementCase::factory()->create(['user_id' => $provider->id]);
+        $this->advanceToRestriction($admin, $case, [RestrictedCapability::AvailabilityChanges->value]);
+
+        $this->actingAs($provider)
+            ->patch(route('provider.availability.update', $profile), ['availability_status' => 'AVAILABLE'])
+            ->assertForbidden();
     }
 
     public function test_affected_user_can_appeal_and_admin_can_resolve_case(): void

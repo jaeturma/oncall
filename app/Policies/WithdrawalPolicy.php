@@ -23,7 +23,7 @@ class WithdrawalPolicy
     public function create(User $user): bool
     {
         return $user->status === UserStatus::Active
-            && ! $user->isCapabilityRestricted(RestrictedCapability::FullAccountAccess);
+            && ! $user->isCapabilityRestricted(RestrictedCapability::Withdrawals);
     }
 
     public function cancel(User $user, Withdrawal $withdrawal): bool
