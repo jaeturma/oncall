@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\V1\EnforcementAppealController;
 use App\Http\Controllers\Api\V1\EnforcementCaseController;
 use App\Http\Controllers\Api\V1\JobController;
 use App\Http\Controllers\Api\V1\JobMessageController;
+use App\Http\Controllers\Api\V1\JobPaymentController;
 use App\Http\Controllers\Api\V1\JobStatusController;
 use App\Http\Controllers\Api\V1\LocationController;
 use App\Http\Controllers\Api\V1\MessagesController;
@@ -82,6 +83,7 @@ Route::name('api.')->group(function () {
         Route::get('/jobs', [JobController::class, 'index'])->name('jobs.index');
         Route::get('/jobs/{job}', [JobController::class, 'show'])->name('jobs.show');
         Route::patch('/jobs/{job}/status', JobStatusController::class)->name('jobs.status.update');
+        Route::patch('/job-payments/{job_payment}/confirm', [JobPaymentController::class, 'confirm'])->middleware('throttle:10,1')->name('job-payments.confirm');
         Route::post('/jobs/{job}/messages', [JobMessageController::class, 'store'])->middleware('throttle:20,1')->name('jobs.messages.store');
         Route::post('/jobs/{job}/reviews', [ReviewController::class, 'store'])->middleware('throttle:5,1')->name('jobs.reviews.store');
         Route::post('/jobs/{job}/reports', [UserReportController::class, 'store'])->middleware('throttle:5,1')->name('jobs.reports.store');
