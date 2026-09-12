@@ -19,9 +19,18 @@ class AuthenticatedSessionController extends Controller
      *
      * Crucially, a correct password is not enough: `canUseMobile()` is checked
      * after credentials verify, so a back-office account (Admin/Accounting/
-     * Budget/Cashier) can never obtain a mobile token even with valid
-     * credentials — this is what makes `/api/v1` marketplace-only at the door,
-     * on top of the `can:use-mobile` gate on every route behind it.
+     * Budget/Cashier — Verifier/Enforcement/Super Admin/Maintenance all
+     * collapse into Admin per ADR-001) can never obtain a mobile token even
+     * with valid credentials — this is what makes `/api/v1` marketplace-only
+     * at the door, on top of the `can:use-mobile` gate on every route behind
+     * it (Phase D).
+     *
+     * Account status (suspended) and capability restrictions are deliberately
+     * NOT checked here, matching the web login: a suspended marketplace user
+     * can still authenticate so they can reach `/api/v1/enforcement-cases`
+     * and appeal (see `EnsureAccountIsActive`'s allow-list) — every other
+     * route still blocks them. Narrower `RestrictedCapability` states are
+     * enforced per-action by policies, not at login, same as on the web.
      */
     public function store(Request $request): JsonResponse
     {
@@ -33,7 +42,7 @@ class AuthenticatedSessionController extends Controller
         }
 
         if (! $user->canUseMobile()) {
-            throw ValidationException::withMessages(['email' => ['This account cannot sign in to the mobile app.']]);
+            throw ValidationException::withMessages(['email' => ['Your account is authorized for the Oncall Philippines web administration portal only.']]);
         }
 
         return response()->json([
@@ -42,6 +51,13 @@ class AuthenticatedSessionController extends Controller
         ]);
     }
 
+    /**
+     * Revokes only the token used for this request (current-device logout).
+     * Sanctum's per-token model (one named token per device/session) already
+     * makes a future "log out of all devices" trivial to add — a single
+     * `$request->user()->tokens()->delete()` — without any structural change
+     * here, so no such endpoint is added until it's actually needed.
+     */
     public function destroy(Request $request): JsonResponse
     {
         $request->user()->currentAccessToken()->delete();

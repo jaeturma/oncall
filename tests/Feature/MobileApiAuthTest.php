@@ -9,10 +9,12 @@ use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Tests\TestCase;
 
 /**
- * Phase D — mobile API auth. `/api/v1` must be marketplace-only: a
- * back-office account (Admin/Accounting/Budget/Cashier) must never obtain a
- * mobile token, even with a correct password, and a request without one
- * must never reach a protected route.
+ * Phase D/E — mobile API auth. `/api/v1` must be marketplace-only: a
+ * back-office account (Admin/Accounting/Budget/Cashier — Verifier and every
+ * other back-office concept from the master prompt collapses into Admin per
+ * ADR-001, so there is no separate "verifier" role to test) must never
+ * obtain a mobile token, even with a correct password, and a request
+ * without one must never reach a protected route.
  */
 class MobileApiAuthTest extends TestCase
 {
@@ -62,9 +64,21 @@ class MobileApiAuthTest extends TestCase
 
             $response = $this->postJson('/api/v1/auth/login', ['email' => $user->email, 'password' => 'password123']);
 
-            $response->assertUnprocessable();
+            $response->assertUnprocessable()->assertJsonPath('errors.email.0', 'Your account is authorized for the Oncall Philippines web administration portal only.');
             $this->assertSame(0, $user->tokens()->count(), "{$role->value} should not have received a mobile token");
         }
+    }
+
+    public function test_login_succeeds_for_a_user_who_is_someone_elses_sponsor(): void
+    {
+        // Sponsor/Referrer is not a role (ADR-001) — it's a Customer or
+        // Provider account that other users registered under.
+        $sponsor = User::factory()->create(['role' => UserRole::ServiceFinder, 'status' => UserStatus::Active, 'password' => 'password123']);
+        User::factory()->create(['sponsor_user_id' => $sponsor->id]);
+
+        $response = $this->postJson('/api/v1/auth/login', ['email' => $sponsor->email, 'password' => 'password123']);
+
+        $response->assertOk()->assertJsonStructure(['data' => ['id'], 'token']);
     }
 
     public function test_login_rejects_wrong_password(): void
@@ -88,6 +102,24 @@ class MobileApiAuthTest extends TestCase
         $this->withHeader('Authorization', "Bearer {$token}")
             ->getJson('/api/v1/profile')
             ->assertForbidden();
+    }
+
+    /**
+     * A suspended marketplace user can still log in and reach their own
+     * enforcement case/appeal (mirrors `AccountSuspensionTest` on the web) —
+     * login deliberately does not hard-block on account status; every other
+     * route is what actually blocks them, via `EnsureAccountIsActive`.
+     */
+    public function test_suspended_marketplace_user_can_log_in_and_reach_their_case_but_nothing_else(): void
+    {
+        $user = User::factory()->create(['role' => UserRole::ServiceFinder, 'status' => UserStatus::Suspended, 'password' => 'password123']);
+
+        $login = $this->postJson('/api/v1/auth/login', ['email' => $user->email, 'password' => 'password123']);
+        $login->assertOk();
+        $token = $login->json('token');
+
+        $this->withHeader('Authorization', "Bearer {$token}")->getJson('/api/v1/enforcement-cases')->assertOk();
+        $this->withHeader('Authorization', "Bearer {$token}")->getJson('/api/v1/jobs')->assertForbidden();
     }
 
     public function test_logout_revokes_the_current_token(): void
