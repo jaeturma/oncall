@@ -28,9 +28,12 @@ use App\Policies\UserReportPolicy;
 use App\Policies\WithdrawalPolicy;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Auth\Listeners\SendEmailVerificationNotification;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -77,5 +80,11 @@ class AppServiceProvider extends ServiceProvider
         // MustVerifyEmail, and this sends the verification email whenever a
         // Registered event fires (registration, and nowhere else).
         Event::listen(Registered::class, SendEmailVerificationNotification::class);
+
+        // Phase D: throttles every /api/v1 route (via `$middleware->throttleApi()`
+        // in bootstrap/app.php). Keyed by user when authenticated so one mobile
+        // account can't exhaust another's quota; falls back to IP for the
+        // unauthenticated login/register endpoints.
+        RateLimiter::for('api', fn (Request $request) => Limit::perMinute(60)->by($request->user()?->id ?: $request->ip()));
     }
 }

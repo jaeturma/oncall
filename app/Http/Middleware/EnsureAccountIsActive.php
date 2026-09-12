@@ -25,18 +25,26 @@ class EnsureAccountIsActive
         'enforcement-cases.show',
         'enforcement-cases.appeal',
         'logout',
+        'api.enforcement-cases.index',
+        'api.enforcement-cases.show',
+        'api.enforcement-cases.appeal',
+        'api.auth.logout',
     ];
 
     public function handle(Request $request, Closure $next): Response
     {
         $user = $request->user();
 
-        if ($user?->status === UserStatus::Suspended && ! $request->routeIs(self::ALLOWED_WHILE_SUSPENDED)) {
-            return redirect()
-                ->route('enforcement-cases.index')
-                ->with('status', 'Your account is suspended. Review the case details and submit an appeal if you disagree.');
+        if ($user?->status !== UserStatus::Suspended || $request->routeIs(self::ALLOWED_WHILE_SUSPENDED)) {
+            return $next($request);
         }
 
-        return $next($request);
+        $message = 'Your account is suspended. Review the case details and submit an appeal if you disagree.';
+
+        if ($request->is('api/*')) {
+            return response()->json(['message' => $message], 403);
+        }
+
+        return redirect()->route('enforcement-cases.index')->with('status', $message);
     }
 }
