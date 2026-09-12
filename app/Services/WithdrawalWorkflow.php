@@ -13,9 +13,9 @@ use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 
 /**
  * Cashout workflow: Requested -> Accounting Review -> Budget Approval ->
- * For Disbursement -> Disbursed -> Completed. The requested amount is held on
- * the ledger the moment the request is made so it cannot be withdrawn twice.
- * No money leaves without a matching, auditable ledger entry.
+ * For Disbursement -> Completed. The requested amount is held on the ledger
+ * the moment the request is made so it cannot be withdrawn twice. No money
+ * leaves without a matching, auditable ledger entry.
  */
 class WithdrawalWorkflow
 {

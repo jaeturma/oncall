@@ -76,6 +76,27 @@ class WithdrawalWorkflowTest extends TestCase
         $this->workflow->advance($withdrawal, $this->staff(UserRole::Budget), 'approve');
     }
 
+    /** Cashier is the final stage's role — this is a two-stage skip attempt, not just an adjacent one. */
+    public function test_cashier_cannot_act_while_a_withdrawal_is_still_in_accounting_review(): void
+    {
+        $user = $this->fundedUser('500.00');
+        $withdrawal = $this->workflow->request($user, '150.00', 'GCash', 'ref');
+
+        $this->expectExceptionMessage('must be handled by');
+        $this->workflow->advance($withdrawal, $this->staff(UserRole::Cashier), 'approve');
+    }
+
+    /** Accounting already acted once; it cannot act again once the withdrawal has moved to Budget's stage. */
+    public function test_accounting_cannot_re_act_once_a_withdrawal_has_moved_to_budget_approval(): void
+    {
+        $user = $this->fundedUser('500.00');
+        $withdrawal = $this->workflow->request($user, '150.00', 'GCash', 'ref');
+        $this->workflow->advance($withdrawal, $this->staff(UserRole::Accounting), 'approve');
+
+        $this->expectExceptionMessage('must be handled by');
+        $this->workflow->advance($withdrawal, $this->staff(UserRole::Accounting), 'approve');
+    }
+
     public function test_rejecting_a_withdrawal_returns_the_held_amount(): void
     {
         $user = $this->fundedUser('500.00');

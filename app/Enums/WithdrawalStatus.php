@@ -8,7 +8,6 @@ enum WithdrawalStatus: string
     case AccountingReview = 'ACCOUNTING_REVIEW';
     case BudgetApproval = 'BUDGET_APPROVAL';
     case ForDisbursement = 'FOR_DISBURSEMENT';
-    case Disbursed = 'DISBURSED';
     case Completed = 'COMPLETED';
     case Returned = 'RETURNED';
     case Rejected = 'REJECTED';
