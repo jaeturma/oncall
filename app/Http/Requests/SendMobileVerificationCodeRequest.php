@@ -2,8 +2,10 @@
 
 namespace App\Http\Requests;
 
+use App\Models\User;
+use App\Services\MobileNumberNormalizer;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 class SendMobileVerificationCodeRequest extends FormRequest
 {
@@ -15,12 +17,32 @@ class SendMobileVerificationCodeRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'phone' => ['required', 'string', 'max:30', 'regex:/^(09|\+639)\d{9}$/', Rule::unique('users', 'phone')->ignore($this->user())],
+            'phone' => ['required', 'string', 'max:20'],
         ];
     }
 
-    public function messages(): array
+    public function after(): array
     {
-        return ['phone.regex' => 'Enter a Philippine mobile number, e.g. 09171234567.'];
+        return [function (Validator $validator): void {
+            if ($validator->errors()->has('phone')) {
+                return;
+            }
+
+            $normalized = app(MobileNumberNormalizer::class)->normalize($this->string('phone')->value());
+            if ($normalized === null) {
+                $validator->errors()->add('phone', 'Enter a Philippine mobile number, e.g. 09171234567.');
+
+                return;
+            }
+
+            $exists = User::query()
+                ->where('phone', $normalized)
+                ->when($this->user(), fn ($query) => $query->whereKeyNot($this->user()))
+                ->exists();
+
+            if ($exists) {
+                $validator->errors()->add('phone', 'This mobile number is already registered to another account.');
+            }
+        }];
     }
 }

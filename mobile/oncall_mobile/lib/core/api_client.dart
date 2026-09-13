@@ -123,6 +123,9 @@ class ApiClient {
         statusCode: statusCode,
         message: message,
         fieldErrors: fieldErrors,
+        retryAfterSeconds: body['retry_after'] is int
+            ? body['retry_after'] as int
+            : null,
       );
     }
 

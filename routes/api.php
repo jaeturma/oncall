@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\V1\JobPaymentController;
 use App\Http\Controllers\Api\V1\JobStatusController;
 use App\Http\Controllers\Api\V1\LocationController;
 use App\Http\Controllers\Api\V1\MessagesController;
+use App\Http\Controllers\Api\V1\MobileVerificationController;
 use App\Http\Controllers\Api\V1\NotificationController;
 use App\Http\Controllers\Api\V1\ProfileController;
 use App\Http\Controllers\Api\V1\Provider\AcceptedServiceRequestController;
@@ -65,6 +66,12 @@ Route::name('api.')->group(function () {
 
         Route::get('/verification', [VerificationController::class, 'index'])->name('verification.index');
         Route::post('/verification/documents', [VerificationController::class, 'store'])->middleware('throttle:5,1')->name('verification.documents.store');
+
+        // Phase L: OTP request/verify/resend. Never returns the code or SMS
+        // provider config — see MobileVerificationController's docblock.
+        Route::post('/mobile-verification/request', [MobileVerificationController::class, 'request'])->middleware('throttle:5,1')->name('mobile-verification.request');
+        Route::post('/mobile-verification/verify', [MobileVerificationController::class, 'verify'])->middleware('throttle:10,1')->name('mobile-verification.verify');
+        Route::post('/mobile-verification/resend', [MobileVerificationController::class, 'resend'])->middleware('throttle:5,1')->name('mobile-verification.resend');
 
         Route::get('/catalog', [CatalogController::class, 'index'])->name('catalog');
         Route::get('/provinces', [LocationController::class, 'index'])->name('provinces.index');

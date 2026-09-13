@@ -10,6 +10,7 @@ import 'data/enforcement_repository.dart';
 import 'data/job_repository.dart';
 import 'data/location_repository.dart';
 import 'data/messages_repository.dart';
+import 'data/mobile_verification_repository.dart';
 import 'data/notification_repository.dart';
 import 'data/profile_repository.dart';
 import 'data/provider_repository.dart';
@@ -91,6 +92,9 @@ class _OncallAppState extends State<OncallApp> {
         ),
         Provider<VerificationRepository>(
           create: (_) => VerificationRepository(_apiClient),
+        ),
+        Provider<MobileVerificationRepository>(
+          create: (_) => MobileVerificationRepository(_apiClient),
         ),
         Provider<EnforcementRepository>(
           create: (_) => EnforcementRepository(_apiClient),

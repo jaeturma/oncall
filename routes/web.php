@@ -14,6 +14,8 @@ use App\Http\Controllers\Admin\ReportController as AdminReportController;
 use App\Http\Controllers\Admin\ResolvedEnforcementCaseController;
 use App\Http\Controllers\Admin\ReviewedEnforcementAppealController;
 use App\Http\Controllers\Admin\ServiceCatalogController;
+use App\Http\Controllers\Admin\SmsLogController;
+use App\Http\Controllers\Admin\SmsSettingController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Admin\VerificationReviewController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
@@ -140,6 +142,14 @@ Route::middleware(['auth', 'account.active'])->group(function () {
         Route::patch('/enforcement/{enforcement_case}', [AdminEnforcementCaseController::class, 'update'])->name('enforcement.update');
         Route::patch('/enforcement/{enforcement_case}/resolve', ResolvedEnforcementCaseController::class)->name('enforcement.resolve');
         Route::patch('/enforcement/{enforcement_case}/appeal', ReviewedEnforcementAppealController::class)->name('enforcement.appeal.update');
+
+        // Phase L: SMS/OTP administration. Web-only by construction — there
+        // is no equivalent route anywhere in routes/api.php, so this is
+        // unreachable from a mobile Sanctum token regardless of role.
+        Route::get('/settings/sms', [SmsSettingController::class, 'edit'])->name('settings.sms.edit');
+        Route::patch('/settings/sms', [SmsSettingController::class, 'update'])->name('settings.sms.update');
+        Route::post('/settings/sms/test', [SmsSettingController::class, 'test'])->middleware('throttle:5,1')->name('settings.sms.test');
+        Route::get('/sms/logs', [SmsLogController::class, 'index'])->name('sms-logs.index');
     });
 
     // Commissions and finance reports are the one part of the admin area

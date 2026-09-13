@@ -34,6 +34,26 @@ class AuthenticationTest extends TestCase
         $this->assertDatabaseMissing('users', ['email' => 'intruder@example.com']);
     }
 
+    /**
+     * Phase L: registration used to accept `phone` in any raw format with no
+     * normalization, so the same real number in a different written form
+     * could bypass the uniqueness check entirely — exactly the class of bug
+     * a later mobile-verification uniqueness check (which does normalize)
+     * would otherwise miss against an unnormalized existing row.
+     */
+    public function test_registration_normalizes_phone_and_rejects_a_duplicate_in_a_different_format(): void
+    {
+        $this->post(route('register'), ['name' => 'Finder', 'email' => 'finder1@example.com', 'phone' => '09171234567', 'role' => 'SERVICE_FINDER', 'password' => 'password123', 'password_confirmation' => 'password123'])
+            ->assertRedirect(route('dashboard'));
+        $this->assertDatabaseHas('users', ['email' => 'finder1@example.com', 'phone' => '+639171234567']);
+
+        $this->post(route('logout'));
+
+        $this->post(route('register'), ['name' => 'Finder Two', 'email' => 'finder2@example.com', 'phone' => '+639171234567', 'role' => 'SERVICE_FINDER', 'password' => 'password123', 'password_confirmation' => 'password123'])
+            ->assertSessionHasErrors('phone');
+        $this->assertDatabaseMissing('users', ['email' => 'finder2@example.com']);
+    }
+
     /** Phase K: registration had no rate limit at all, unlike login/forgot-password right next to it. */
     public function test_registration_is_rate_limited(): void
     {

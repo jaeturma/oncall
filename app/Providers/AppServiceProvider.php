@@ -75,6 +75,16 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('access-admin', fn (?User $user): bool => $user?->canAccessAdmin() ?? false);
         Gate::define('access-back-office', fn (?User $user): bool => $user?->canAccessBackOffice() ?? false);
 
+        // Phase L: SMS/OTP administration. All four collapse to Admin-only
+        // today (ADR-001 has no separate Maintenance/System-Configuration
+        // role), kept as their own named gates — matching the phase spec's
+        // vocabulary — rather than inline canAccessAdmin() checks, so a
+        // future split doesn't mean hunting down every call site.
+        Gate::define('manage-sms-settings', fn (User $user): bool => $user->canAccessAdmin());
+        Gate::define('view-sms-logs', fn (User $user): bool => $user->canAccessAdmin());
+        Gate::define('send-test-sms', fn (User $user): bool => $user->canAccessAdmin());
+        Gate::define('manage-otp-policy', fn (User $user): bool => $user->canAccessAdmin());
+
         // Laravel's slim skeleton has no EventServiceProvider to auto-wire
         // this, so it's registered explicitly: User implements
         // MustVerifyEmail, and this sends the verification email whenever a

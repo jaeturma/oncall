@@ -14,6 +14,8 @@
         ['label' => 'Commissions', 'route' => 'admin.commissions.index', 'match' => 'admin.commissions.*'],
         ['label' => 'Account types', 'route' => 'admin.account-types.index', 'match' => 'admin.account-types.*'],
         ['label' => 'Catalog', 'route' => 'admin.catalog', 'match' => 'admin.catalog'],
+        ['label' => 'SMS settings', 'route' => 'admin.settings.sms.edit', 'match' => 'admin.settings.sms.*'],
+        ['label' => 'SMS logs', 'route' => 'admin.sms-logs.index', 'match' => 'admin.sms-logs.*'],
         ['label' => 'Audit log', 'route' => 'admin.audit-logs.index', 'match' => 'admin.audit-logs.*'],
     ];
 @endphp

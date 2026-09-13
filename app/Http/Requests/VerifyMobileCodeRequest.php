@@ -13,6 +13,6 @@ class VerifyMobileCodeRequest extends FormRequest
 
     public function rules(): array
     {
-        return ['code' => ['required', 'digits:6']];
+        return ['code' => ['required', 'digits_between:4,8']];
     }
 }

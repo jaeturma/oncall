@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\OtpPurpose;
 use App\Enums\VerificationStatus;
 use App\Models\Municipality;
 use App\Models\ProviderDocument;
@@ -9,7 +10,7 @@ use App\Models\ProviderProfile;
 use App\Models\Province;
 use App\Models\Service;
 use App\Models\User;
-use App\Services\MobileVerificationService;
+use App\Services\OtpService;
 use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\Notification;
@@ -82,10 +83,13 @@ class ContactVerificationTest extends TestCase
         $user = User::factory()->create(['phone' => null]);
 
         $this->actingAs($user)->post(route('verification.mobile.send'), ['phone' => '09171234567'])->assertRedirect(route('verification.index'));
-        $this->assertSame('09171234567', $user->refresh()->phone);
+        $this->assertSame('+639171234567', $user->refresh()->phone);
         $this->assertFalse($user->isMobileVerified());
 
-        $code = app(MobileVerificationService::class)->issueCode($user);
+        // No SMS provider is configured in tests, so the controller falls back
+        // to a demo code in the flashed status message (non-production only).
+        preg_match('/Demo code \(no SMS provider configured\): (\d+)\./', (string) session('status'), $matches);
+        $code = $matches[1] ?? $this->fail('No demo code was flashed to the session.');
 
         $this->actingAs($user)->post(route('verification.mobile.verify'), ['code' => $code])->assertRedirect(route('verification.index'));
         $this->assertTrue($user->refresh()->isMobileVerified());
@@ -94,7 +98,7 @@ class ContactVerificationTest extends TestCase
     public function test_wrong_mobile_code_is_rejected(): void
     {
         $user = User::factory()->create(['phone' => '09171234567']);
-        app(MobileVerificationService::class)->issueCode($user);
+        app(OtpService::class)->request($user, $user->phone, OtpPurpose::MobileVerification, '127.0.0.1');
 
         $this->actingAs($user)->post(route('verification.mobile.verify'), ['code' => '000000'])->assertSessionHasErrors('code');
         $this->assertFalse($user->refresh()->isMobileVerified());
@@ -102,7 +106,7 @@ class ContactVerificationTest extends TestCase
 
     public function test_mobile_number_must_be_unique(): void
     {
-        User::factory()->create(['phone' => '09171234567']);
+        User::factory()->create(['phone' => '+639171234567']);
         $user = User::factory()->create(['phone' => null]);
 
         $this->actingAs($user)->post(route('verification.mobile.send'), ['phone' => '09171234567'])->assertSessionHasErrors('phone');

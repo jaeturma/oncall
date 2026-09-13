@@ -7,10 +7,12 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\V1\UserResource;
 use App\Models\AccountType;
 use App\Models\User;
+use App\Services\MobileNumberNormalizer;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rules\Password;
+use Illuminate\Validation\ValidationException;
 
 class RegisteredUserController extends Controller
 {
@@ -20,22 +22,36 @@ class RegisteredUserController extends Controller
      * there is no way to self-register a back-office role from either
      * surface.
      */
-    public function store(Request $request): JsonResponse
+    public function store(Request $request, MobileNumberNormalizer $normalizer): JsonResponse
     {
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', 'unique:users'],
-            'phone' => ['nullable', 'string', 'max:30', 'unique:users'],
+            'phone' => ['nullable', 'string', 'max:20'],
             'role' => ['required', 'in:SERVICE_FINDER,SERVICE_PROVIDER'],
             'password' => ['required', 'confirmed', Password::defaults()],
             'sponsor_email' => ['nullable', 'email', 'exists:users,email'],
         ]);
         $sponsor = filled($data['sponsor_email'] ?? null) ? User::where('email', $data['sponsor_email'])->first() : null;
         $role = UserRole::from($data['role']);
+
+        // Normalized here, not just at mobile-verification time — see the
+        // web RegisteredUserController for why (Phase L).
+        $phone = null;
+        if (filled($data['phone'] ?? null)) {
+            $phone = $normalizer->normalize($data['phone']);
+            if ($phone === null) {
+                throw ValidationException::withMessages(['phone' => 'Enter a valid Philippine mobile number, e.g. 09171234567.']);
+            }
+            if (User::where('phone', $phone)->exists()) {
+                throw ValidationException::withMessages(['phone' => 'This mobile number is already registered to another account.']);
+            }
+        }
+
         $user = User::create([
             'name' => $data['name'],
             'email' => $data['email'],
-            'phone' => $data['phone'] ?? null,
+            'phone' => $phone,
             'role' => $role,
             'password' => $data['password'],
             'sponsor_user_id' => $sponsor?->id,

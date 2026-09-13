@@ -6,11 +6,16 @@ class ApiException implements Exception {
     required this.statusCode,
     required this.message,
     this.fieldErrors = const {},
+    this.retryAfterSeconds,
   });
 
   final int? statusCode;
   final String message;
   final Map<String, List<String>> fieldErrors;
+
+  /// Populated for a 429 (rate limited / cooldown) response — see
+  /// `OtpService`'s cooldown/rate-limit responses on the backend.
+  final int? retryAfterSeconds;
 
   String? firstErrorFor(String field) => fieldErrors[field]?.first;
 

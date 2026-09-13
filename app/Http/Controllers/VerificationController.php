@@ -3,10 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Enums\DocumentType;
+use App\Enums\OtpPurpose;
 use App\Enums\VerificationStatus;
 use App\Http\Requests\StoreProviderDocumentRequest;
 use App\Models\ProviderDocument;
-use App\Services\MobileVerificationService;
+use App\Services\OtpService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -17,12 +18,12 @@ use Throwable;
 
 class VerificationController extends Controller
 {
-    public function index(Request $request, MobileVerificationService $mobileVerification): View
+    public function index(Request $request, OtpService $otp): View
     {
         return view('verification.index', [
             'documentTypes' => DocumentType::cases(),
             'documents' => $request->user()->providerDocuments()->latest()->get(),
-            'hasPendingMobileCode' => $mobileVerification->hasPendingCode($request->user()),
+            'hasPendingMobileCode' => $otp->hasActiveCode($request->user(), OtpPurpose::MobileVerification),
         ]);
     }
 

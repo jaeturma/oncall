@@ -9,9 +9,9 @@
     $value = $status instanceof \BackedEnum ? $status->value : (string) $status;
 
     $tone = match ($value) {
-        'ACTIVE', 'VERIFIED', 'COMPLETED', 'ACCEPTED', 'RELEASED', 'APPROVED', 'AVAILABLE', 'RESOLVED', 'DISBURSED', 'PAID', 'POSTED' => 'success',
-        'PENDING', 'SUBMITTED', 'REQUESTED', 'SEARCHING', 'WARNING', 'FOR_DISBURSEMENT', 'ACCOUNTING_REVIEW', 'BUDGET_APPROVAL', 'OPEN', 'RETURNED' => 'warning',
-        'REJECTED', 'SUSPENDED', 'RESTRICTED', 'CANCELLED', 'DISPUTED', 'REVERSED', 'EXPIRED', 'DENIED', 'UPHELD', 'VOID', 'DISMISSED' => 'danger',
+        'ACTIVE', 'VERIFIED', 'COMPLETED', 'ACCEPTED', 'RELEASED', 'APPROVED', 'AVAILABLE', 'RESOLVED', 'DISBURSED', 'PAID', 'POSTED', 'SENT', 'DELIVERED' => 'success',
+        'PENDING', 'SUBMITTED', 'REQUESTED', 'SEARCHING', 'WARNING', 'FOR_DISBURSEMENT', 'ACCOUNTING_REVIEW', 'BUDGET_APPROVAL', 'OPEN', 'RETURNED', 'QUEUED' => 'warning',
+        'REJECTED', 'SUSPENDED', 'RESTRICTED', 'CANCELLED', 'DISPUTED', 'REVERSED', 'EXPIRED', 'DENIED', 'UPHELD', 'VOID', 'DISMISSED', 'FAILED' => 'danger',
         'IN_PROGRESS', 'ON_THE_WAY', 'UNDER_REVIEW', 'PARTIALLY_UPHELD' => 'info',
         default => 'neutral',
     };
