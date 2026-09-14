@@ -121,6 +121,16 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->hasMany(Withdrawal::class);
     }
 
+    public function deviceTokens(): HasMany
+    {
+        return $this->hasMany(DeviceToken::class);
+    }
+
+    public function notificationPreferences(): HasMany
+    {
+        return $this->hasMany(NotificationPreference::class);
+    }
+
     public function isCapabilityRestricted(RestrictedCapability $capability): bool
     {
         if ($this->status === UserStatus::Suspended) {

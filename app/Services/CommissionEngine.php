@@ -8,6 +8,7 @@ use App\Enums\WalletTransactionType;
 use App\Models\AuditLog;
 use App\Models\Commission;
 use App\Models\User;
+use App\Services\Notifications\NotificationDispatcher;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
@@ -20,7 +21,7 @@ class CommissionEngine
 {
     public function __construct(
         private readonly WalletLedger $ledger,
-        private readonly Notifier $notifier,
+        private readonly NotificationDispatcher $notifications,
     ) {}
 
     /**
@@ -80,6 +81,14 @@ class CommissionEngine
                 'after_json' => $commission->fresh()->toArray(),
             ]);
 
+            $this->notifications->dispatch(
+                $sponsor,
+                'sponsor_commission_pending',
+                ['sponsored_name' => $sponsoredUser->name, 'amount' => $amount],
+                ['screen' => 'wallet'],
+                dedupKey: "sponsor_commission_pending:commission:{$commission->id}",
+            );
+
             return $commission;
         });
     }
@@ -105,12 +114,12 @@ class CommissionEngine
             }
 
             $this->audit($approver, 'commission.approved', $locked, $before);
-            $this->notifier->push(
+            $this->notifications->dispatch(
                 $locked->sponsor,
-                'commission.approved',
-                'Sponsor commission released',
-                'PHP '.$locked->amount.' from '.$locked->sponsoredUser->name.' is now available in your wallet.',
-                route('wallet.index'),
+                'sponsor_commission_posted',
+                ['sponsored_name' => $locked->sponsoredUser->name, 'amount' => $locked->amount],
+                ['screen' => 'wallet'],
+                dedupKey: "sponsor_commission_posted:commission:{$locked->id}",
             );
 
             return $locked;

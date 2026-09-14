@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\Notifications\NotificationTargetResolver;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Notifications\DatabaseNotification;
@@ -17,12 +18,12 @@ class NotificationController extends Controller
         ]);
     }
 
-    public function read(Request $request, DatabaseNotification $notification): RedirectResponse
+    public function read(Request $request, DatabaseNotification $notification, NotificationTargetResolver $targets): RedirectResponse
     {
         abort_unless($this->owns($request, $notification), 403);
         $notification->markAsRead();
 
-        $url = $notification->data['url'] ?? null;
+        $url = $targets->toUrl($notification->data['target'] ?? null) ?? $notification->data['url'] ?? null;
 
         return $url ? redirect()->to($url) : back();
     }

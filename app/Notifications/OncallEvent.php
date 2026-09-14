@@ -13,11 +13,13 @@ class OncallEvent extends Notification
 {
     use Queueable;
 
+    /** @param  array{screen: string, id?: int|string}|null  $target  Phase M: safe navigation target — see NotificationCatalog. */
     public function __construct(
         public readonly string $key,
         public readonly string $title,
         public readonly string $body,
         public readonly ?string $url = null,
+        public readonly ?array $target = null,
     ) {}
 
     /**
@@ -29,7 +31,7 @@ class OncallEvent extends Notification
     }
 
     /**
-     * @return array<string, string|null>
+     * @return array<string, mixed>
      */
     public function toArray(object $notifiable): array
     {
@@ -38,6 +40,7 @@ class OncallEvent extends Notification
             'title' => $this->title,
             'body' => $this->body,
             'url' => $this->url,
+            'target' => $this->target,
         ];
     }
 }

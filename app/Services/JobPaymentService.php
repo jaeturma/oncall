@@ -9,6 +9,7 @@ use App\Models\AuditLog;
 use App\Models\Job;
 use App\Models\JobPayment;
 use App\Models\User;
+use App\Services\Notifications\NotificationDispatcher;
 use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 
@@ -21,7 +22,7 @@ class JobPaymentService
 {
     public function __construct(
         private readonly WalletLedger $ledger,
-        private readonly Notifier $notifier,
+        private readonly NotificationDispatcher $notifications,
     ) {}
 
     /** Called when a job is marked completed. Idempotent. */
@@ -65,12 +66,12 @@ class JobPaymentService
             ]);
 
             $this->audit($finder, 'job_payment.confirmed', $locked, $before);
-            $this->notifier->push(
+            $this->notifications->dispatch(
                 $locked->provider,
-                'job_payment.confirmed',
-                'Payment confirmed by the Service Finder',
-                'PHP '.$locked->net_amount.' is pending Oncall release into your wallet.',
-                route('jobs.show', $locked->job_id),
+                'job_payment_confirmed',
+                ['amount' => $locked->net_amount],
+                ['screen' => 'job', 'id' => $locked->job_id],
+                dedupKey: "job_payment_confirmed:job_payment:{$locked->id}",
             );
 
             return $locked;
@@ -95,12 +96,12 @@ class JobPaymentService
 
             $locked->update(['status' => JobPaymentStatus::Released, 'released_by' => $staff->id, 'released_at' => now()]);
             $this->audit($staff, 'job_payment.released', $locked, $before);
-            $this->notifier->push(
+            $this->notifications->dispatch(
                 $locked->provider,
-                'job_payment.released',
-                'Job earning released to your wallet',
-                'PHP '.$locked->net_amount.' is now available to withdraw.',
-                route('wallet.index'),
+                'job_payment_released',
+                ['amount' => $locked->net_amount],
+                ['screen' => 'wallet'],
+                dedupKey: "job_payment_released:job_payment:{$locked->id}",
             );
 
             return $locked;

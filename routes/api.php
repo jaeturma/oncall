@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\V1\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Api\V1\Auth\RegisteredUserController;
 use App\Http\Controllers\Api\V1\CancelledServiceRequestController;
 use App\Http\Controllers\Api\V1\CatalogController;
+use App\Http\Controllers\Api\V1\DeviceController;
 use App\Http\Controllers\Api\V1\DisputeController;
 use App\Http\Controllers\Api\V1\EnforcementAppealController;
 use App\Http\Controllers\Api\V1\EnforcementCaseController;
@@ -15,6 +16,7 @@ use App\Http\Controllers\Api\V1\LocationController;
 use App\Http\Controllers\Api\V1\MessagesController;
 use App\Http\Controllers\Api\V1\MobileVerificationController;
 use App\Http\Controllers\Api\V1\NotificationController;
+use App\Http\Controllers\Api\V1\NotificationPreferenceController;
 use App\Http\Controllers\Api\V1\ProfileController;
 use App\Http\Controllers\Api\V1\Provider\AcceptedServiceRequestController;
 use App\Http\Controllers\Api\V1\Provider\AvailabilityController;
@@ -99,8 +101,19 @@ Route::name('api.')->group(function () {
 
         Route::get('/messages', [MessagesController::class, 'index'])->name('messages.index');
         Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
+        Route::get('/notifications/unread-count', [NotificationController::class, 'unreadCount'])->name('notifications.unread-count');
         Route::patch('/notifications/read-all', [NotificationController::class, 'readAll'])->name('notifications.read-all');
         Route::patch('/notifications/{notification}/read', [NotificationController::class, 'read'])->name('notifications.read');
+
+        // Phase M: device-token registration for push. `register` also
+        // serves as the token-refresh endpoint (Step 8). The recipient is
+        // always the authenticated user — see RegisterDeviceRequest's
+        // docblock for why there is no `user_id` field.
+        Route::post('/devices/register', [DeviceController::class, 'register'])->middleware('throttle:20,1')->name('devices.register');
+        Route::delete('/devices/{device}', [DeviceController::class, 'destroy'])->name('devices.destroy');
+
+        Route::get('/notification-preferences', [NotificationPreferenceController::class, 'index'])->name('notification-preferences.index');
+        Route::patch('/notification-preferences', [NotificationPreferenceController::class, 'update'])->middleware('throttle:20,1')->name('notification-preferences.update');
 
         Route::get('/wallet', [WalletController::class, 'index'])->name('wallet.index');
         Route::get('/wallet/withdrawals', [WithdrawalController::class, 'index'])->name('withdrawals.index');

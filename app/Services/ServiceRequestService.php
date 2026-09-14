@@ -8,11 +8,12 @@ use App\Models\Job;
 use App\Models\ProviderProfile;
 use App\Models\ServiceRequest;
 use App\Models\User;
+use App\Services\Notifications\NotificationDispatcher;
 use Illuminate\Support\Facades\DB;
 
 class ServiceRequestService
 {
-    public function __construct(private readonly Notifier $notifier) {}
+    public function __construct(private readonly NotificationDispatcher $notifications) {}
 
     public function create(User $serviceFinder, ProviderProfile $providerProfile, array $attributes): ServiceRequest
     {
@@ -25,12 +26,12 @@ class ServiceRequestService
             'safety_acknowledged_at' => now(),
         ]);
 
-        $this->notifier->push(
+        $this->notifications->dispatch(
             $providerProfile->user,
-            'service_request.received',
-            'New service request',
-            $serviceFinder->name.' requested "'.$serviceRequest->title.'".',
-            route('service-requests.show', $serviceRequest),
+            'service_request_created',
+            ['customer_name' => $serviceFinder->name, 'service_name' => $serviceRequest->title],
+            ['screen' => 'service_request', 'id' => $serviceRequest->id],
+            dedupKey: "service_request_created:service_request:{$serviceRequest->id}",
         );
 
         return $serviceRequest;
@@ -53,12 +54,12 @@ class ServiceRequestService
             ]);
             $job->statusLogs()->create(['from_status' => null, 'to_status' => JobStatus::Accepted, 'changed_by' => $provider->id, 'notes' => 'Provider accepted the service request.']);
 
-            $this->notifier->push(
+            $this->notifications->dispatch(
                 $lockedRequest->serviceFinder,
-                'service_request.accepted',
-                'Request accepted — booking confirmed',
-                $provider->name.' accepted "'.$lockedRequest->title.'" at PHP '.$agreedPrice.'.',
-                route('jobs.show', $job),
+                'service_request_accepted',
+                ['provider_name' => $provider->name, 'service_name' => $lockedRequest->title, 'amount' => $agreedPrice],
+                ['screen' => 'job', 'id' => $job->id],
+                dedupKey: "service_request_accepted:service_request:{$lockedRequest->id}",
             );
 
             return $job;
@@ -72,12 +73,12 @@ class ServiceRequestService
             abort_unless($lockedRequest->status === ServiceRequestStatus::Requested && $lockedRequest->requested_provider_id === $provider->id, 409);
             $lockedRequest->update(['requested_provider_id' => null, 'status' => ServiceRequestStatus::Searching]);
 
-            $this->notifier->push(
+            $this->notifications->dispatch(
                 $lockedRequest->serviceFinder,
-                'service_request.declined',
-                'Provider declined your request',
-                'Your request "'.$lockedRequest->title.'" is open again — you can request another provider.',
-                route('service-requests.show', $lockedRequest),
+                'service_request_declined',
+                ['service_name' => $lockedRequest->title],
+                ['screen' => 'service_request', 'id' => $lockedRequest->id],
+                dedupKey: "service_request_declined:service_request:{$lockedRequest->id}",
             );
 
             return $lockedRequest;

@@ -35,4 +35,23 @@ return [
         ],
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Firebase Cloud Messaging (Phase M)
+    |--------------------------------------------------------------------------
+    |
+    | `credentials_path` is an absolute filesystem path to a Firebase service
+    | account JSON key — never commit that file, never put it under a
+    | web-served directory, and never expose it through any API. See
+    | docs/architecture/NOTIFICATION_ARCHITECTURE.md for how to provision it.
+    | With no credentials configured, PushNotificationService reports every
+    | send as `skipped` (push_not_configured) instead of failing — the same
+    | "safe no-op until an admin finishes setup" behavior Phase L uses for
+    | SMS with no provider configured.
+    */
+    'fcm' => [
+        'project_id' => env('FCM_PROJECT_ID'),
+        'credentials_path' => env('FCM_CREDENTIALS_PATH'),
+    ],
+
 ];

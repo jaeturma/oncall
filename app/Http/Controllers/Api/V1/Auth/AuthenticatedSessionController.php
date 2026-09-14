@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1\Auth;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\V1\UserResource;
 use App\Models\User;
+use App\Services\Notifications\DeviceTokenService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -57,9 +58,19 @@ class AuthenticatedSessionController extends Controller
      * makes a future "log out of all devices" trivial to add — a single
      * `$request->user()->tokens()->delete()` — without any structural change
      * here, so no such endpoint is added until it's actually needed.
+     *
+     * Phase M: also deactivates this device's push registration when Flutter
+     * supplies its `installation_id`, so a shared/logged-out device stops
+     * receiving this account's private push notifications (Step 9) without
+     * touching that user's other devices.
      */
-    public function destroy(Request $request): JsonResponse
+    public function destroy(Request $request, DeviceTokenService $devices): JsonResponse
     {
+        $installationId = $request->string('installation_id')->value();
+        if ($installationId !== '') {
+            $devices->deactivateForInstallation($request->user(), $installationId);
+        }
+
         $request->user()->currentAccessToken()->delete();
 
         return response()->json(['message' => 'Logged out.']);

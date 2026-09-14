@@ -6,9 +6,11 @@ use App\Enums\OtpPurpose;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Services\MobileNumberNormalizer;
+use App\Services\Notifications\NotificationDispatcher;
 use App\Services\OtpService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
 
 /**
@@ -35,6 +37,8 @@ class MobileVerificationController extends Controller
             return response()->json(['message' => 'This mobile number is already registered to another account.'], 422);
         }
 
+        $isChange = $user->phone_verified_at !== null && $user->phone !== $normalized;
+        Cache::put("mobile-verification-is-change:{$user->id}", $isChange, now()->addMinutes(30));
         $user->forceFill(['phone_verified_at' => null])->save();
 
         try {
@@ -86,7 +90,7 @@ class MobileVerificationController extends Controller
         ]);
     }
 
-    public function verify(Request $request, OtpService $otp): JsonResponse
+    public function verify(Request $request, OtpService $otp, NotificationDispatcher $notifications): JsonResponse
     {
         $request->validate(['code' => ['required', 'digits_between:4,8']]);
         $user = $request->user();
@@ -96,6 +100,9 @@ class MobileVerificationController extends Controller
         }
 
         $user->forceFill(['phone_verified_at' => now()])->save();
+
+        $isChange = (bool) Cache::pull("mobile-verification-is-change:{$user->id}", false);
+        $notifications->dispatch($user, $isChange ? 'security_mobile_changed' : 'security_mobile_verified');
 
         return response()->json(['message' => 'Mobile number verified.', 'mobile_verified' => true]);
     }

@@ -5,8 +5,10 @@ namespace App\Http\Controllers;
 use App\Enums\OtpPurpose;
 use App\Http\Requests\SendMobileVerificationCodeRequest;
 use App\Http\Requests\VerifyMobileCodeRequest;
+use App\Services\Notifications\NotificationDispatcher;
 use App\Services\OtpService;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Cache;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 
 class MobileVerificationController extends Controller
@@ -14,6 +16,8 @@ class MobileVerificationController extends Controller
     public function send(SendMobileVerificationCodeRequest $request, OtpService $otp): RedirectResponse
     {
         $user = $request->user();
+        $isChange = $user->phone_verified_at !== null && $user->phone !== $request->string('phone')->value();
+        Cache::put("mobile-verification-is-change:{$user->id}", $isChange, now()->addMinutes(30));
         // Not mass-assignable on purpose (see the User model's #[Fillable] list) —
         // clearing it here is deliberate, not a form re-submitting stale data.
         $user->forceFill(['phone_verified_at' => null])->save();
@@ -42,7 +46,7 @@ class MobileVerificationController extends Controller
         return redirect()->route('verification.index')->with('status', $status);
     }
 
-    public function verify(VerifyMobileCodeRequest $request, OtpService $otp): RedirectResponse
+    public function verify(VerifyMobileCodeRequest $request, OtpService $otp, NotificationDispatcher $notifications): RedirectResponse
     {
         $user = $request->user();
 
@@ -51,6 +55,9 @@ class MobileVerificationController extends Controller
         }
 
         $user->forceFill(['phone_verified_at' => now()])->save();
+
+        $isChange = (bool) Cache::pull("mobile-verification-is-change:{$user->id}", false);
+        $notifications->dispatch($user, $isChange ? 'security_mobile_changed' : 'security_mobile_verified');
 
         return redirect()->route('verification.index')->with('status', 'Your mobile number is verified.');
     }

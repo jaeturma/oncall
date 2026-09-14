@@ -32,7 +32,7 @@ class NotificationTest extends TestCase
         $this->actingAs($provider)->patch(route('service-requests.accept', $request), ['agreed_price' => '900.00'])->assertRedirect();
 
         $note = $finder->notifications()->sole();
-        $this->assertSame('service_request.accepted', $note->data['key']);
+        $this->assertSame('service_request_accepted', $note->data['key']);
         $this->assertStringContainsString('900.00', $note->data['body']);
     }
 
@@ -42,7 +42,7 @@ class NotificationTest extends TestCase
 
         $this->actingAs($provider)->patch(route('service-requests.decline', $request))->assertRedirect();
 
-        $this->assertSame('service_request.declined', $finder->notifications()->sole()->data['key']);
+        $this->assertSame('service_request_declined', $finder->notifications()->sole()->data['key']);
     }
 
     public function test_a_job_status_change_notifies_the_other_participant(): void
@@ -52,7 +52,7 @@ class NotificationTest extends TestCase
 
         app(JobService::class)->transition($job, $provider, JobStatus::OnTheWay, null);
 
-        $this->assertSame('job.status_changed', $finder->fresh()->notifications()->sole()->data['key']);
+        $this->assertSame('provider_on_the_way', $finder->fresh()->notifications()->sole()->data['key']);
         $this->assertSame(0, $provider->fresh()->notifications()->count());
     }
 
@@ -65,7 +65,7 @@ class NotificationTest extends TestCase
 
         $this->actingAs($admin)->patch(route('admin.verifications.update', $document), ['status' => 'VERIFIED'])->assertRedirect();
 
-        $this->assertSame('verification.reviewed', $applicant->notifications()->sole()->data['key']);
+        $this->assertSame('verification_approved', $applicant->notifications()->sole()->data['key']);
     }
 
     public function test_the_inbox_lists_notifications_and_mark_as_read_works(): void

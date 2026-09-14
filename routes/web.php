@@ -9,6 +9,9 @@ use App\Http\Controllers\Admin\EnforcementCaseController as AdminEnforcementCase
 use App\Http\Controllers\Admin\FinanceReportController;
 use App\Http\Controllers\Admin\JobController as AdminJobController;
 use App\Http\Controllers\Admin\LocationController;
+use App\Http\Controllers\Admin\NotificationLogController;
+use App\Http\Controllers\Admin\NotificationSettingController;
+use App\Http\Controllers\Admin\NotificationTemplateController;
 use App\Http\Controllers\Admin\ProviderController as AdminProviderController;
 use App\Http\Controllers\Admin\ReportController as AdminReportController;
 use App\Http\Controllers\Admin\ResolvedEnforcementCaseController;
@@ -150,6 +153,15 @@ Route::middleware(['auth', 'account.active'])->group(function () {
         Route::patch('/settings/sms', [SmsSettingController::class, 'update'])->name('settings.sms.update');
         Route::post('/settings/sms/test', [SmsSettingController::class, 'test'])->middleware('throttle:5,1')->name('settings.sms.test');
         Route::get('/sms/logs', [SmsLogController::class, 'index'])->name('sms-logs.index');
+
+        // Phase M: notification administration. Also web-only by
+        // construction — no equivalent route exists in routes/api.php.
+        Route::get('/settings/notifications', [NotificationSettingController::class, 'edit'])->name('settings.notifications.edit');
+        Route::patch('/settings/notifications', [NotificationSettingController::class, 'update'])->name('settings.notifications.update');
+        Route::get('/settings/notification-templates', [NotificationTemplateController::class, 'index'])->name('settings.notification-templates.index');
+        Route::get('/settings/notification-templates/{event_key}/edit', [NotificationTemplateController::class, 'edit'])->name('settings.notification-templates.edit');
+        Route::patch('/settings/notification-templates/{event_key}', [NotificationTemplateController::class, 'update'])->name('settings.notification-templates.update');
+        Route::get('/notifications/logs', [NotificationLogController::class, 'index'])->name('notifications.logs.index');
     });
 
     // Commissions and finance reports are the one part of the admin area

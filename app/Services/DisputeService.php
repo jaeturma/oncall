@@ -14,6 +14,7 @@ use App\Models\EnforcementCase;
 use App\Models\Job;
 use App\Models\JobPayment;
 use App\Models\User;
+use App\Services\Notifications\NotificationDispatcher;
 use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 
@@ -21,7 +22,7 @@ class DisputeService
 {
     public function __construct(
         private readonly JobPaymentService $jobPayments,
-        private readonly Notifier $notifier,
+        private readonly NotificationDispatcher $notifications,
     ) {}
 
     public function open(Job $job, User $raiser, DisputeCategory $category, string $description): Dispute
@@ -52,12 +53,12 @@ class DisputeService
 
             $this->audit($raiser, 'dispute.opened', $dispute, null);
 
-            $this->notifier->push(
+            $this->notifications->dispatch(
                 $dispute->againstUser,
-                'dispute.opened',
-                'A dispute was opened on your job',
-                $raiser->name.' opened a dispute. The job payment is frozen until an admin resolves it.',
-                route('jobs.show', $lockedJob),
+                'dispute_opened',
+                ['actor_name' => $raiser->name],
+                ['screen' => 'job', 'id' => $lockedJob->id],
+                dedupKey: "dispute_opened:dispute:{$dispute->id}",
             );
 
             return $dispute;
@@ -134,12 +135,12 @@ class DisputeService
     private function notifyResolved(Dispute $dispute, string $outcome): void
     {
         foreach ([$dispute->job->service_finder_id, $dispute->job->provider_id] as $userId) {
-            $this->notifier->push(
+            $this->notifications->dispatch(
                 User::find($userId),
-                'dispute.resolved',
-                'Dispute resolved: '.$outcome,
-                $dispute->resolution ?: 'An admin has closed the dispute on your job.',
-                route('jobs.show', $dispute->job_id),
+                'dispute_resolved',
+                ['status' => $outcome, 'resolution' => $dispute->resolution ?: 'An admin has closed the dispute on your job.'],
+                ['screen' => 'job', 'id' => $dispute->job_id],
+                dedupKey: "dispute_resolved:dispute:{$dispute->id}:{$userId}",
             );
         }
     }

@@ -19,9 +19,10 @@
                             <p class="mt-0.5 text-sm text-ink-secondary">{{ $notification->data['body'] ?? '' }}</p>
                             <time class="mt-1 block text-xs text-ink-muted" datetime="{{ $notification->created_at->toIso8601String() }}">{{ $notification->created_at->diffForHumans() }}</time>
                         </div>
+                        @php($hasTarget = app(\App\Services\Notifications\NotificationTargetResolver::class)->toUrl($notification->data['target'] ?? null) !== null || ($notification->data['url'] ?? null))
                         <form method="POST" action="{{ route('notifications.read', $notification->id) }}" data-skip-loading>
                             @csrf @method('PATCH')
-                            @if($notification->data['url'] ?? null)
+                            @if($hasTarget)
                                 <x-ui.button variant="secondary" size="sm" icon-right="arrow-right">Open</x-ui.button>
                             @elseif($unread)
                                 <x-ui.button variant="ghost" size="sm">Mark read</x-ui.button>

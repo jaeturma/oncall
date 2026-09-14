@@ -5,13 +5,14 @@ namespace App\Services;
 use App\Enums\JobStatus;
 use App\Models\Job;
 use App\Models\User;
+use App\Services\Notifications\NotificationDispatcher;
 use Illuminate\Support\Facades\DB;
 
 class JobService
 {
     public function __construct(
         private readonly JobPaymentService $jobPayments,
-        private readonly Notifier $notifier,
+        private readonly NotificationDispatcher $notifications,
     ) {}
 
     public function transition(Job $job, User $actor, JobStatus $targetStatus, ?string $notes): Job
@@ -37,12 +38,19 @@ class JobService
             }
 
             $recipientId = $actor->id === $lockedJob->service_finder_id ? $lockedJob->provider_id : $lockedJob->service_finder_id;
-            $this->notifier->push(
+            $eventKey = match ($targetStatus) {
+                JobStatus::OnTheWay => 'provider_on_the_way',
+                JobStatus::InProgress => 'service_started',
+                JobStatus::Completed => 'service_completed',
+                JobStatus::Cancelled => 'service_cancelled',
+                default => 'job_status_changed',
+            };
+            $this->notifications->dispatch(
                 User::find($recipientId),
-                'job.status_changed',
-                'Booking updated: '.str($targetStatus->value)->replace('_', ' ')->title(),
-                $actor->name.' set the job to "'.str($targetStatus->value)->replace('_', ' ')->title().'".',
-                route('jobs.show', $lockedJob),
+                $eventKey,
+                ['actor_name' => $actor->name, 'status' => str($targetStatus->value)->replace('_', ' ')->title()->value()],
+                ['screen' => 'job', 'id' => $lockedJob->id],
+                dedupKey: "{$eventKey}:job:{$lockedJob->id}:{$targetStatus->value}",
             );
 
             return $lockedJob;

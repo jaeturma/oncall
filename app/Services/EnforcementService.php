@@ -10,12 +10,13 @@ use App\Enums\UserStatus;
 use App\Models\AuditLog;
 use App\Models\EnforcementCase;
 use App\Models\User;
+use App\Services\Notifications\NotificationDispatcher;
 use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 
 class EnforcementService
 {
-    public function __construct(private readonly Notifier $notifier) {}
+    public function __construct(private readonly NotificationDispatcher $notifications) {}
 
     /** @param array<string, mixed> $attributes */
     public function apply(EnforcementCase $case, User $admin, array $attributes, ?string $ipAddress, ?string $userAgent): EnforcementCase
@@ -60,12 +61,18 @@ class EnforcementService
             ]);
             $lockedCase->user()->update(['status' => $userStatus]);
             $this->audit($admin, 'enforcement.action_applied', $lockedCase, $before, $lockedCase->fresh()->toArray(), $ipAddress, $userAgent);
-            $this->notifier->push(
+
+            $eventKey = match ($targetAction) {
+                EnforcementAction::Warning => 'enforcement_warning',
+                EnforcementAction::AccountReview => 'account_under_review',
+                EnforcementAction::TemporaryRestriction => 'account_restricted',
+                EnforcementAction::Suspension => 'account_suspended',
+            };
+            $this->notifications->dispatch(
                 $lockedCase->user,
-                'enforcement.action_applied',
-                'Account action: '.str($targetAction->value)->replace('_', ' ')->title(),
-                'An admin applied a '.str($targetAction->value)->replace('_', ' ')->lower().' to your account. You can view the case and appeal.',
-                route('enforcement-cases.show', $lockedCase),
+                $eventKey,
+                target: ['screen' => 'enforcement_case', 'id' => $lockedCase->id],
+                dedupKey: "{$eventKey}:enforcement_case:{$lockedCase->id}",
             );
 
             return $lockedCase->fresh();
@@ -79,11 +86,22 @@ class EnforcementService
             $before = $lockedCase->toArray();
             $lockedCase->update(['status' => EnforcementCaseStatus::Resolved, 'resolution' => $resolution, 'handled_by' => $admin->id, 'ends_at' => now()]);
 
+            $reactivated = false;
             if (! $lockedCase->user->enforcementCases()->where('id', '!=', $lockedCase->id)->whereIn('status', ['OPEN', 'UNDER_REVIEW', 'RESTRICTED', 'SUSPENDED'])->exists()) {
                 $lockedCase->user()->update(['status' => UserStatus::Active]);
+                $reactivated = true;
             }
 
             $this->audit($admin, 'enforcement.case_resolved', $lockedCase, $before, $lockedCase->fresh()->toArray(), $ipAddress, $userAgent);
+
+            if ($reactivated) {
+                $this->notifications->dispatch(
+                    $lockedCase->user,
+                    'account_reactivated',
+                    target: ['screen' => 'enforcement_case', 'id' => $lockedCase->id],
+                    dedupKey: "account_reactivated:user:{$lockedCase->user_id}:{$lockedCase->id}",
+                );
+            }
 
             return $lockedCase->fresh();
         });
@@ -108,12 +126,12 @@ class EnforcementService
             $before = $lockedCase->toArray();
             $lockedCase->update(['appeal_status' => $appealStatus, 'resolution' => $resolution, 'handled_by' => $admin->id]);
             $this->audit($admin, 'enforcement.appeal_reviewed', $lockedCase, $before, $lockedCase->fresh()->toArray(), $ipAddress, $userAgent);
-            $this->notifier->push(
+            $this->notifications->dispatch(
                 $lockedCase->user,
-                'enforcement.appeal_reviewed',
-                'Appeal '.str($appealStatus->value)->replace('_', ' ')->lower(),
-                $resolution,
-                route('enforcement-cases.show', $lockedCase),
+                'enforcement_appeal_reviewed',
+                ['status' => str($appealStatus->value)->replace('_', ' ')->lower()->value(), 'resolution' => $resolution],
+                ['screen' => 'enforcement_case', 'id' => $lockedCase->id],
+                dedupKey: "enforcement_appeal_reviewed:enforcement_case:{$lockedCase->id}:{$appealStatus->value}",
             );
 
             return $lockedCase->fresh();

@@ -8,6 +8,7 @@ use App\Models\AuditLog;
 use App\Models\User;
 use App\Models\WalletTransaction;
 use App\Models\Withdrawal;
+use App\Services\Notifications\NotificationDispatcher;
 use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 
@@ -21,7 +22,7 @@ class WithdrawalWorkflow
 {
     public function __construct(
         private readonly WalletLedger $ledger,
-        private readonly Notifier $notifier,
+        private readonly NotificationDispatcher $notifications,
     ) {}
 
     public function request(User $user, string $amount, string $payoutMethod, string $payoutReference): Withdrawal
@@ -54,6 +55,13 @@ class WithdrawalWorkflow
             ]);
 
             $this->audit(null, 'withdrawal.requested', $withdrawal, null);
+            $this->notifications->dispatch(
+                $user,
+                'withdrawal_submitted',
+                ['amount' => $withdrawal->amount],
+                ['screen' => 'withdrawal'],
+                dedupKey: "withdrawal_submitted:withdrawal:{$withdrawal->id}",
+            );
 
             return $withdrawal;
         });
@@ -86,7 +94,13 @@ class WithdrawalWorkflow
                     'notes' => $stamp,
                 ]);
                 $this->audit($actor, 'withdrawal.'.$decision.'ed', $locked, $before);
-                $this->notify($locked, $decision === 'reject' ? 'was rejected' : 'was returned for correction — the amount is back in your wallet');
+                $this->notifications->dispatch(
+                    $locked->user,
+                    $decision === 'reject' ? 'withdrawal_rejected' : 'withdrawal_returned',
+                    ['amount' => $locked->amount],
+                    ['screen' => 'withdrawal'],
+                    dedupKey: "withdrawal_{$decision}:withdrawal:{$locked->id}",
+                );
 
                 return $locked;
             }
@@ -109,23 +123,25 @@ class WithdrawalWorkflow
             };
 
             $this->audit($actor, 'withdrawal.advanced', $locked, $before);
-            $this->notify($locked, $locked->status === WithdrawalStatus::Completed
-                ? 'has been disbursed'
-                : 'advanced to '.str($locked->status->value)->replace('_', ' ')->title());
+
+            $eventKey = match ($locked->status) {
+                WithdrawalStatus::BudgetApproval => 'withdrawal_accounting_approved',
+                WithdrawalStatus::ForDisbursement => 'withdrawal_budget_approved',
+                WithdrawalStatus::Completed => 'withdrawal_disbursed',
+                default => null,
+            };
+            if ($eventKey !== null) {
+                $this->notifications->dispatch(
+                    $locked->user,
+                    $eventKey,
+                    ['amount' => $locked->amount],
+                    ['screen' => 'withdrawal'],
+                    dedupKey: "{$eventKey}:withdrawal:{$locked->id}",
+                );
+            }
 
             return $locked;
         });
-    }
-
-    private function notify(Withdrawal $withdrawal, string $phrase): void
-    {
-        $this->notifier->push(
-            $withdrawal->user,
-            'withdrawal.updated',
-            'Withdrawal update',
-            'Your PHP '.$withdrawal->amount.' withdrawal '.$phrase.'.',
-            route('withdrawals.index'),
-        );
     }
 
     public function cancel(Withdrawal $withdrawal, User $owner): Withdrawal

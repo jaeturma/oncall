@@ -36,6 +36,11 @@ class NotificationController extends Controller
         return response()->json(['message' => 'All notifications marked as read.']);
     }
 
+    public function unreadCount(Request $request): JsonResponse
+    {
+        return response()->json(['unread_count' => $request->user()->unreadNotifications()->count()]);
+    }
+
     private function owns(Request $request, DatabaseNotification $notification): bool
     {
         return $notification->notifiable_type === $request->user()->getMorphClass()

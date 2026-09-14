@@ -85,6 +85,13 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('send-test-sms', fn (User $user): bool => $user->canAccessAdmin());
         Gate::define('manage-otp-policy', fn (User $user): bool => $user->canAccessAdmin());
 
+        // Phase M: notification administration. Same Admin-only collapse as
+        // the SMS gates above (ADR-001 has no separate Maintenance/System-
+        // Configuration role yet) — named per the phase spec's vocabulary.
+        Gate::define('manage-notification-settings', fn (User $user): bool => $user->canAccessAdmin());
+        Gate::define('manage-notification-templates', fn (User $user): bool => $user->canAccessAdmin());
+        Gate::define('view-notification-logs', fn (User $user): bool => $user->canAccessAdmin());
+
         // Laravel's slim skeleton has no EventServiceProvider to auto-wire
         // this, so it's registered explicitly: User implements
         // MustVerifyEmail, and this sends the verification email whenever a

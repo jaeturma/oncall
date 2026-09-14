@@ -7,7 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\ReviewVerificationRequest;
 use App\Models\AuditLog;
 use App\Models\ProviderDocument;
-use App\Services\Notifier;
+use App\Services\Notifications\NotificationDispatcher;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -35,7 +35,7 @@ class VerificationReviewController extends Controller
         ]);
     }
 
-    public function update(ReviewVerificationRequest $request, ProviderDocument $providerDocument, Notifier $notifier): RedirectResponse
+    public function update(ReviewVerificationRequest $request, ProviderDocument $providerDocument, NotificationDispatcher $notifications): RedirectResponse
     {
         abort_unless(in_array($providerDocument->status, self::ACTIONABLE_STATUSES, true), 422);
         $previousStatus = $providerDocument->status;
@@ -59,16 +59,16 @@ class VerificationReviewController extends Controller
         });
 
         $wasRevoked = $previousStatus === VerificationStatus::Verified && $status !== VerificationStatus::Verified;
-        $notifier->push(
+        $eventKey = match (true) {
+            $status === VerificationStatus::Verified => 'verification_approved',
+            $wasRevoked => 'verification_revoked',
+            default => 'verification_rejected',
+        };
+        $notifications->dispatch(
             $providerDocument->user,
-            'verification.reviewed',
-            'Identity verification '.($status === VerificationStatus::Verified ? 'approved' : ($wasRevoked ? 'revoked' : str($status->value)->lower())),
-            match (true) {
-                $status === VerificationStatus::Verified => 'Your identity is verified. A badge now appears on your profile.',
-                $wasRevoked => 'Your identity verification was revoked. Review the notes and submit a new document.',
-                default => 'Your latest document was not approved. Review the notes and submit again.',
-            },
-            route('verification.index'),
+            $eventKey,
+            target: ['screen' => 'verification'],
+            dedupKey: "{$eventKey}:provider_document:{$providerDocument->id}:{$previousStatus->value}:{$status->value}",
         );
 
         return back()->with('status', 'Verification review saved.');
