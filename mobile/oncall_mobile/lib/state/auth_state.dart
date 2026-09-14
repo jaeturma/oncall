@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 
 import '../core/api_client.dart';
+import '../core/device_identity.dart';
 import '../core/token_storage.dart';
 import '../data/auth_repository.dart';
 import '../data/profile_repository.dart';
@@ -19,10 +20,12 @@ class AuthState extends ChangeNotifier {
     required TokenStorage tokenStorage,
     required AuthRepository authRepository,
     required ProfileRepository profileRepository,
+    required DeviceIdentity deviceIdentity,
   }) : _apiClient = apiClient,
        _tokenStorage = tokenStorage,
        _authRepository = authRepository,
-       _profileRepository = profileRepository {
+       _profileRepository = profileRepository,
+       _deviceIdentity = deviceIdentity {
     _apiClient.onUnauthorized = _handleUnauthorized;
   }
 
@@ -30,6 +33,7 @@ class AuthState extends ChangeNotifier {
   final TokenStorage _tokenStorage;
   final AuthRepository _authRepository;
   final ProfileRepository _profileRepository;
+  final DeviceIdentity _deviceIdentity;
 
   AuthStatus status = AuthStatus.unknown;
   User? user;
@@ -97,7 +101,8 @@ class AuthState extends ChangeNotifier {
 
   Future<void> logout() async {
     try {
-      await _authRepository.logout();
+      final installationId = await _deviceIdentity.installationId();
+      await _authRepository.logout(installationId: installationId);
     } catch (_) {
       // Token may already be dead server-side; still clear it locally.
     }

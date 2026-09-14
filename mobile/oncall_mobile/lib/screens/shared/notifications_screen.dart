@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../core/formatters.dart';
 import '../../core/notification_targets.dart';
 import '../../data/notification_repository.dart';
+import '../../services/push_service.dart';
 import '../../widgets/common.dart';
 
 class NotificationsScreen extends StatefulWidget {
@@ -21,6 +22,16 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   void initState() {
     super.initState();
     _load = context.read<NotificationRepository>().list();
+    // A foreground push doesn't create anything client-side — the backend
+    // already wrote it — this just prompts a refresh while this screen is
+    // the one visible (Step 31).
+    context.read<PushService>().addListener(_refresh);
+  }
+
+  @override
+  void dispose() {
+    context.read<PushService>().removeListener(_refresh);
+    super.dispose();
   }
 
   Future<void> _refresh() async {

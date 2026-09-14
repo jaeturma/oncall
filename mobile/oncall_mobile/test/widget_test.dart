@@ -5,6 +5,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:oncall_mobile/core/api_client.dart';
+import 'package:oncall_mobile/core/device_identity.dart';
 import 'package:oncall_mobile/core/token_storage.dart';
 import 'package:oncall_mobile/data/auth_repository.dart';
 import 'package:oncall_mobile/data/profile_repository.dart';
@@ -22,6 +23,7 @@ AuthState _buildAuthState() {
     tokenStorage: tokenStorage,
     authRepository: AuthRepository(apiClient),
     profileRepository: ProfileRepository(apiClient),
+    deviceIdentity: DeviceIdentity(),
   );
 }
 

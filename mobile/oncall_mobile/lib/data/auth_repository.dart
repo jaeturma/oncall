@@ -50,7 +50,13 @@ class AuthRepository {
     return _fromJson(json);
   }
 
-  Future<void> logout() => _client.post('/auth/logout');
+  /// [installationId], when given, deactivates only that device's push
+  /// registration (Phase M Step 9) — the server never touches the user's
+  /// other devices for a single-device logout.
+  Future<void> logout({String? installationId}) => _client.post(
+    '/auth/logout',
+    data: installationId == null ? null : {'installation_id': installationId},
+  );
 
   AuthResult _fromJson(Map<String, dynamic> json) => AuthResult(
     user: User.fromJson(json['data'] as Map<String, dynamic>),
