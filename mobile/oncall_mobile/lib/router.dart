@@ -18,6 +18,7 @@ import 'screens/shared/report_user_screen.dart';
 import 'screens/shared/service_request_detail_screen.dart';
 import 'screens/shared/sponsor_screen.dart';
 import 'screens/shared/verification_screen.dart';
+import 'screens/shared/wallet_screen.dart';
 import 'screens/shared/withdrawal_request_screen.dart';
 import 'screens/shared/withdrawals_screen.dart';
 import 'state/auth_state.dart';
@@ -111,6 +112,14 @@ GoRouter buildRouter(AuthState authState) {
         builder: (context, state) => ConversationScreen(
           jobId: int.parse(state.pathParameters['jobId']!),
         ),
+      ),
+      GoRoute(
+        // Wallet is normally a shell tab (no URL of its own); this route
+        // exists so a `wallet`-targeted notification has somewhere to push
+        // to. Pushed on top of the shell, so WalletScreen's own AppBar back
+        // button returns to wherever the user was.
+        path: '/wallet',
+        builder: (context, state) => const WalletScreen(),
       ),
       GoRoute(
         path: '/wallet/withdrawals',

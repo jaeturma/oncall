@@ -6,7 +6,9 @@
 // "only breaks when actually parsed" issue, so these are worth locking in.
 import 'package:flutter_test/flutter_test.dart';
 import 'package:oncall_mobile/core/json.dart';
+import 'package:oncall_mobile/core/notification_targets.dart';
 import 'package:oncall_mobile/models/job.dart';
+import 'package:oncall_mobile/models/notification.dart';
 import 'package:oncall_mobile/models/paginated.dart';
 import 'package:oncall_mobile/models/provider_profile.dart';
 import 'package:oncall_mobile/models/user.dart';
@@ -147,6 +149,108 @@ void main() {
         expect(disbursed.isCancellable, isFalse);
       },
     );
+  });
+
+  group('AppNotification.fromJson', () {
+    test('reads the flat title/body/target shape the API resource sends', () {
+      final notification = AppNotification.fromJson({
+        'id': 'a1b2',
+        'type': 'service_request_accepted',
+        'title': 'Request accepted — booking confirmed',
+        'body': 'Pedro accepted "Fix the sink" at PHP 900.00.',
+        'target': {'screen': 'job', 'id': 42},
+        'read_at': null,
+        'created_at': '2026-09-14T05:00:00.000000Z',
+      });
+
+      expect(notification.title, 'Request accepted — booking confirmed');
+      expect(notification.body, 'Pedro accepted "Fix the sink" at PHP 900.00.');
+      expect(notification.target?.screen, 'job');
+      expect(notification.target?.id, 42);
+      expect(notification.isUnread, isTrue);
+    });
+
+    test('falls back to the event key when the title is missing', () {
+      final notification = AppNotification.fromJson({
+        'id': 'a1b2',
+        'type': 'service_request_accepted',
+        'title': null,
+        'body': null,
+        'target': null,
+        'read_at': '2026-09-14T05:00:00.000000Z',
+        'created_at': '2026-09-14T05:00:00.000000Z',
+      });
+
+      expect(notification.title, 'service_request_accepted');
+      expect(notification.body, '');
+      expect(notification.target, isNull);
+      expect(notification.isUnread, isFalse);
+    });
+  });
+
+  group('notificationRouteFor', () {
+    test('builds a route for a screen that requires an id', () {
+      expect(
+        notificationRouteFor(NotificationTarget(screen: 'job', id: 42)),
+        '/jobs/42',
+      );
+      expect(
+        notificationRouteFor(
+          NotificationTarget(screen: 'service_request', id: 7),
+        ),
+        '/service-requests/7',
+      );
+      expect(
+        notificationRouteFor(
+          NotificationTarget(screen: 'enforcement_case', id: 3),
+        ),
+        '/enforcement-cases/3',
+      );
+    });
+
+    test('builds a route for a screen that does not need an id', () {
+      expect(
+        notificationRouteFor(NotificationTarget(screen: 'wallet')),
+        '/wallet',
+      );
+      expect(
+        notificationRouteFor(NotificationTarget(screen: 'withdrawal')),
+        '/wallet/withdrawals',
+      );
+      expect(
+        notificationRouteFor(NotificationTarget(screen: 'verification')),
+        '/verification',
+      );
+    });
+
+    test('refuses a screen missing a required id', () {
+      expect(notificationRouteFor(NotificationTarget(screen: 'job')), isNull);
+    });
+
+    test('refuses a screen the client does not recognize', () {
+      expect(
+        notificationRouteFor(NotificationTarget(screen: 'admin_users', id: 1)),
+        isNull,
+      );
+    });
+
+    test(
+      'whitelisted but not yet navigable (no dedicated screen) stays put',
+      () {
+        expect(
+          notificationRouteFor(NotificationTarget(screen: 'account_status')),
+          isNull,
+        );
+        expect(
+          notificationRouteFor(NotificationTarget(screen: 'sponsored_users')),
+          isNull,
+        );
+      },
+    );
+
+    test('null target does not navigate', () {
+      expect(notificationRouteFor(null), isNull);
+    });
   });
 
   group('Paginated.fromJson', () {

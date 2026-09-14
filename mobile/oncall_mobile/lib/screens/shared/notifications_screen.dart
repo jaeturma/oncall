@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/formatters.dart';
+import '../../core/notification_targets.dart';
 import '../../data/notification_repository.dart';
 import '../../widgets/common.dart';
 
@@ -85,12 +87,24 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                           color: n.isUnread ? Colors.blue : Colors.grey,
                         ),
                         title: Text(n.title),
-                        subtitle: Text(formatDateTime(n.createdAt)),
+                        subtitle: Text(
+                          n.body.isEmpty
+                              ? formatDateTime(n.createdAt)
+                              : '${n.body}\n${formatDateTime(n.createdAt)}',
+                        ),
+                        isThreeLine: n.body.isNotEmpty,
                         onTap: () async {
+                          final route = notificationRouteFor(n.target);
                           await context.read<NotificationRepository>().markRead(
                             n.id,
                           );
-                          _refresh();
+                          if (!context.mounted) {
+                            return;
+                          }
+                          await _refresh();
+                          if (route != null && context.mounted) {
+                            context.push(route);
+                          }
                         },
                       );
                     },
