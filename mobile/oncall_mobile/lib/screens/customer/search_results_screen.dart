@@ -5,7 +5,9 @@ import 'package:provider/provider.dart';
 import '../../data/provider_search_repository.dart';
 import '../../models/paginated.dart';
 import '../../models/provider_profile.dart';
+import '../../widgets/app_empty_state.dart';
 import '../../widgets/common.dart';
+import '../../widgets/provider_card.dart';
 
 class SearchResultsScreen extends StatefulWidget {
   const SearchResultsScreen({super.key, required this.queryParameters});
@@ -57,9 +59,16 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> {
 
           final providers = snapshot.data!.items;
           if (providers.isEmpty) {
-            return const EmptyView(
-              message: 'No verified providers match your search yet.',
-              icon: Icons.search_off,
+            return const Padding(
+              padding: EdgeInsets.all(16),
+              child: AppEmptyState(
+                icon: Icons.search_off,
+                title: 'No providers found',
+                message:
+                    "We couldn't find providers matching those filters. Try "
+                    'a broader service, remove the municipality filter, or '
+                    'search a nearby province.',
+              ),
             );
           }
 
@@ -70,22 +79,9 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> {
             itemBuilder: (context, index) {
               final p = providers[index];
 
-              return Card(
-                child: ListTile(
-                  title: Text(p.displayName),
-                  subtitle: Text(
-                    [
-                      if (p.rating != null) '★ ${p.rating!.toStringAsFixed(1)}',
-                      '${p.completedJobs} jobs done',
-                      if (p.distanceKm != null)
-                        '${p.distanceKm!.toStringAsFixed(1)} km away',
-                    ].join(' · '),
-                  ),
-                  trailing: p.availableNow
-                      ? const Icon(Icons.circle, color: Colors.green, size: 12)
-                      : null,
-                  onTap: () => context.push('/providers/${p.id}'),
-                ),
+              return ProviderCard(
+                profile: p,
+                onTap: () => context.push('/providers/${p.id}'),
               );
             },
           );

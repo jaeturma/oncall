@@ -12,6 +12,7 @@ import 'package:oncall_mobile/data/profile_repository.dart';
 import 'package:oncall_mobile/screens/auth/login_screen.dart';
 import 'package:oncall_mobile/screens/auth/register_screen.dart';
 import 'package:oncall_mobile/state/auth_state.dart';
+import 'package:oncall_mobile/theme/app_theme.dart';
 import 'package:provider/provider.dart';
 
 AuthState _buildAuthState() {
@@ -29,7 +30,7 @@ AuthState _buildAuthState() {
 
 Widget _wrap(Widget child) => ChangeNotifierProvider<AuthState>.value(
   value: _buildAuthState(),
-  child: MaterialApp(home: child),
+  child: MaterialApp(theme: AppTheme.light, home: child),
 );
 
 void main() {

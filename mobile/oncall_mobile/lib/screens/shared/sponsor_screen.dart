@@ -3,7 +3,11 @@ import 'package:provider/provider.dart';
 
 import '../../core/formatters.dart';
 import '../../data/sponsor_repository.dart';
+import '../../theme/app_colors.dart';
+import '../../widgets/app_card.dart';
+import '../../widgets/app_empty_state.dart';
 import '../../widgets/common.dart';
+import '../../widgets/stat_card.dart';
 
 class SponsorScreen extends StatefulWidget {
   const SponsorScreen({super.key});
@@ -51,56 +55,98 @@ class _SponsorScreenState extends State<SponsorScreen> {
             child: ListView(
               padding: const EdgeInsets.all(16),
               children: [
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: [
-                        _totalTile(
-                          'Available',
-                          formatPeso(referrals.totals.available),
-                        ),
-                        _totalTile(
-                          'Pending',
-                          formatPeso(referrals.totals.pending),
-                        ),
-                        _totalTile('Referrals', '${referrals.totals.count}'),
-                      ],
-                    ),
-                  ),
+                StatCard(
+                  label: 'Sponsored users',
+                  value: '${referrals.totals.count}',
+                  icon: Icons.groups_outlined,
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
+                StatCard(
+                  label: 'Commission available',
+                  value: formatPeso(referrals.totals.available),
+                  hint: 'In your wallet',
+                  icon: Icons.account_balance_wallet_outlined,
+                  tone: StatCardTone.accent,
+                ),
+                const SizedBox(height: 12),
+                StatCard(
+                  label: 'Commission pending',
+                  value: formatPeso(referrals.totals.pending),
+                  hint: 'Awaiting Oncall approval',
+                  icon: Icons.schedule_outlined,
+                ),
+                const SizedBox(height: 20),
                 if (referrals.page.items.isEmpty)
-                  const EmptyView(
+                  const AppEmptyState(
+                    icon: Icons.groups_outlined,
+                    title: 'No sponsored users yet',
                     message:
-                        'You have not sponsored anyone yet. Share your account email with people you refer.',
+                        'Users who register through your sponsorship will '
+                        'appear here. Share your account email with people '
+                        'you refer; they enter it as their sponsor when '
+                        'signing up.',
                   )
                 else
-                  for (final sponsored in referrals.page.items)
-                    Card(
-                      child: ListTile(
-                        title: Text(sponsored.name),
-                        subtitle: Text(
-                          [
-                            sponsored.accountType,
-                            formatDate(sponsored.joinedAt),
-                          ].whereType<String>().join(' · '),
-                        ),
-                        trailing: sponsored.commission == null
-                            ? const Text('—')
-                            : Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                crossAxisAlignment: CrossAxisAlignment.end,
-                                children: [
-                                  Text(
-                                    formatPeso(sponsored.commission!.amount),
+                  for (final sponsored in referrals.page.items) ...[
+                    AppCard(
+                      padding: const EdgeInsets.all(16),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  sponsored.name,
+                                  style: const TextStyle(
+                                    fontFamily: 'Poppins',
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.ink,
                                   ),
-                                  StatusChip(sponsored.commission!.status),
-                                ],
-                              ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  [
+                                    sponsored.accountType,
+                                    formatDate(sponsored.joinedAt),
+                                  ].whereType<String>().join(' · '),
+                                  style: const TextStyle(
+                                    fontFamily: 'Poppins',
+                                    fontSize: 13,
+                                    color: AppColors.inkSecondary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          sponsored.commission == null
+                              ? const Text(
+                                  '—',
+                                  style: TextStyle(color: AppColors.inkMuted),
+                                )
+                              : Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    Text(
+                                      formatPeso(sponsored.commission!.amount),
+                                      style: const TextStyle(
+                                        fontFamily: 'Poppins',
+                                        fontWeight: FontWeight.w600,
+                                        color: AppColors.ink,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    StatusChip(sponsored.commission!.status),
+                                  ],
+                                ),
+                        ],
                       ),
                     ),
+                    const SizedBox(height: 8),
+                  ],
               ],
             ),
           );
@@ -108,11 +154,4 @@ class _SponsorScreenState extends State<SponsorScreen> {
       ),
     );
   }
-
-  Widget _totalTile(String label, String value) => Column(
-    children: [
-      Text(value, style: Theme.of(context).textTheme.titleMedium),
-      Text(label, style: Theme.of(context).textTheme.bodySmall),
-    ],
-  );
 }

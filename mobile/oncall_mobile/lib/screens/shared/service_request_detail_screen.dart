@@ -8,6 +8,8 @@ import '../../data/service_request_repository.dart';
 import '../../models/service_request.dart';
 import '../../models/user.dart';
 import '../../state/auth_state.dart';
+import '../../theme/app_colors.dart';
+import '../../widgets/app_card.dart';
 import '../../widgets/common.dart';
 
 class ServiceRequestDetailScreen extends StatefulWidget {
@@ -138,55 +140,86 @@ class _ServiceRequestDetailScreenState
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        request.title,
-                        style: Theme.of(context).textTheme.headlineSmall,
+                AppCard(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              request.title,
+                              style: Theme.of(context).textTheme.headlineSmall,
+                            ),
+                          ),
+                          StatusChip(request.status),
+                        ],
                       ),
-                    ),
-                    StatusChip(request.status),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                if (request.description != null) Text(request.description!),
-                const SizedBox(height: 16),
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.build_outlined),
-                  title: Text(request.service?.name ?? '—'),
-                ),
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.place_outlined),
-                  title: Text(
-                    [
-                      request.municipality?.name,
-                      request.province?.name,
-                    ].whereType<String>().join(', '),
+                      if (request.description != null) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          request.description!,
+                          style: const TextStyle(
+                            fontFamily: 'Poppins',
+                            color: AppColors.inkSecondary,
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 8),
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: const Icon(
+                          Icons.build_outlined,
+                          color: AppColors.inkMuted,
+                        ),
+                        title: Text(request.service?.name ?? '—'),
+                      ),
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: const Icon(
+                          Icons.place_outlined,
+                          color: AppColors.inkMuted,
+                        ),
+                        title: Text(
+                          [
+                            request.municipality?.name,
+                            request.province?.name,
+                          ].whereType<String>().join(', '),
+                        ),
+                      ),
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: const Icon(
+                          Icons.priority_high,
+                          color: AppColors.inkMuted,
+                        ),
+                        title: Text(humanizeStatus(request.urgency)),
+                      ),
+                      if (request.neededAt != null)
+                        ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: const Icon(
+                            Icons.schedule,
+                            color: AppColors.inkMuted,
+                          ),
+                          title: Text(formatDateTime(request.neededAt)),
+                        ),
+                      if (request.budgetMin != null ||
+                          request.budgetMax != null)
+                        ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: const Icon(
+                            Icons.payments_outlined,
+                            color: AppColors.inkMuted,
+                          ),
+                          title: Text(
+                            '${formatPeso(request.budgetMin)} – ${formatPeso(request.budgetMax)}',
+                          ),
+                        ),
+                    ],
                   ),
                 ),
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.priority_high),
-                  title: Text(humanizeStatus(request.urgency)),
-                ),
-                if (request.neededAt != null)
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.schedule),
-                    title: Text(formatDateTime(request.neededAt)),
-                  ),
-                if (request.budgetMin != null || request.budgetMax != null)
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.payments_outlined),
-                    title: Text(
-                      '${formatPeso(request.budgetMin)} – ${formatPeso(request.budgetMax)}',
-                    ),
-                  ),
                 const SizedBox(height: 24),
                 if (_acting) const Center(child: CircularProgressIndicator()),
                 if (!_acting &&

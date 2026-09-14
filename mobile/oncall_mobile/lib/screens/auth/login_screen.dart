@@ -3,6 +3,8 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../state/auth_state.dart';
+import '../../theme/app_colors.dart';
+import '../../widgets/oncall_logo.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -63,6 +65,13 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    const Center(
+                      child: OncallLogo(
+                        size: OncallLogoSize.lg,
+                        showWordmark: false,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
                     Text(
                       'Oncall Philippines',
                       style: Theme.of(context).textTheme.headlineMedium,
@@ -78,7 +87,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     if (_error != null) ...[
                       Text(
                         _error!,
-                        style: TextStyle(color: Colors.red.shade700),
+                        style: const TextStyle(color: AppColors.danger700),
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 16),
@@ -86,10 +95,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     TextFormField(
                       controller: _emailController,
                       keyboardType: TextInputType.emailAddress,
-                      decoration: const InputDecoration(
-                        labelText: 'Email',
-                        border: OutlineInputBorder(),
-                      ),
+                      decoration: const InputDecoration(labelText: 'Email'),
                       validator: (value) => (value == null || value.isEmpty)
                           ? 'Email is required'
                           : null,
@@ -98,10 +104,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     TextFormField(
                       controller: _passwordController,
                       obscureText: true,
-                      decoration: const InputDecoration(
-                        labelText: 'Password',
-                        border: OutlineInputBorder(),
-                      ),
+                      decoration: const InputDecoration(labelText: 'Password'),
                       validator: (value) => (value == null || value.isEmpty)
                           ? 'Password is required'
                           : null,

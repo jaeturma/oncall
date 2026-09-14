@@ -7,6 +7,8 @@ import '../../core/formatters.dart';
 import '../../data/job_repository.dart';
 import '../../models/job.dart';
 import '../../state/auth_state.dart';
+import '../../theme/app_colors.dart';
+import '../../widgets/app_card.dart';
 import '../../widgets/common.dart';
 
 const _disputeCategories = [
@@ -132,7 +134,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                     IconButton(
                       icon: Icon(
                         star <= rating ? Icons.star : Icons.star_border,
-                        color: Colors.amber,
+                        color: AppColors.gold500,
                       ),
                       onPressed: () => setDialogState(() => rating = star),
                     ),
@@ -308,43 +310,38 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
 
                 if (job.payment != null) ...[
                   const SizedBox(height: 16),
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                'Payment',
-                                style: Theme.of(context).textTheme.titleMedium,
-                              ),
-                              StatusChip(job.payment!.status),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Agreed: ${formatPeso(job.payment!.grossAmount)}',
-                          ),
-                          Text(
-                            'Platform fee: ${formatPeso(job.payment!.platformFee)}',
-                          ),
-                          Text(
-                            'Provider receives: ${formatPeso(job.payment!.netAmount)}',
-                          ),
-                          if (!_acting &&
-                              iAmFinder &&
-                              job.payment!.status == 'PENDING') ...[
-                            const SizedBox(height: 12),
-                            FilledButton(
-                              onPressed: () => _confirmPayment(job.payment!),
-                              child: const Text('Confirm payment made'),
+                  AppCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Payment',
+                              style: Theme.of(context).textTheme.titleMedium,
                             ),
+                            StatusChip(job.payment!.status),
                           ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text('Agreed: ${formatPeso(job.payment!.grossAmount)}'),
+                        Text(
+                          'Platform fee: ${formatPeso(job.payment!.platformFee)}',
+                        ),
+                        Text(
+                          'Provider receives: ${formatPeso(job.payment!.netAmount)}',
+                        ),
+                        if (!_acting &&
+                            iAmFinder &&
+                            job.payment!.status == 'PENDING') ...[
+                          const SizedBox(height: 12),
+                          FilledButton(
+                            onPressed: () => _confirmPayment(job.payment!),
+                            child: const Text('Confirm payment made'),
+                          ),
                         ],
-                      ),
+                      ],
                     ),
                   ),
                 ],
@@ -375,41 +372,38 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                     label: const Text('Report a problem with this job'),
                   )
                 else if (job.dispute != null) ...[
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                'Dispute',
-                                style: Theme.of(context).textTheme.titleMedium,
-                              ),
-                              StatusChip(job.dispute!.status),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          Text(job.dispute!.description),
-                          if (job.dispute!.resolution != null) ...[
-                            const SizedBox(height: 8),
-                            Text('Resolution: ${job.dispute!.resolution}'),
-                          ],
-                          if (!_acting && job.dispute!.isOpen) ...[
-                            const SizedBox(height: 8),
-                            OutlinedButton(
-                              onPressed: () => _run(
-                                () => context
-                                    .read<JobRepository>()
-                                    .withdrawDispute(job.dispute!.id),
-                              ),
-                              child: const Text('Withdraw dispute'),
+                  AppCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Dispute',
+                              style: Theme.of(context).textTheme.titleMedium,
                             ),
+                            StatusChip(job.dispute!.status),
                           ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(job.dispute!.description),
+                        if (job.dispute!.resolution != null) ...[
+                          const SizedBox(height: 8),
+                          Text('Resolution: ${job.dispute!.resolution}'),
                         ],
-                      ),
+                        if (!_acting && job.dispute!.isOpen) ...[
+                          const SizedBox(height: 8),
+                          OutlinedButton(
+                            onPressed: () => _run(
+                              () => context
+                                  .read<JobRepository>()
+                                  .withdrawDispute(job.dispute!.id),
+                            ),
+                            child: const Text('Withdraw dispute'),
+                          ),
+                        ],
+                      ],
                     ),
                   ),
                 ],

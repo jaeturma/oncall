@@ -6,6 +6,9 @@ import '../../core/formatters.dart';
 import '../../data/enforcement_repository.dart';
 import '../../models/enforcement_case.dart';
 import '../../models/paginated.dart';
+import '../../theme/app_colors.dart';
+import '../../widgets/app_card.dart';
+import '../../widgets/app_empty_state.dart';
 import '../../widgets/common.dart';
 
 class EnforcementCasesListScreen extends StatefulWidget {
@@ -55,12 +58,16 @@ class _EnforcementCasesListScreenState
             onRefresh: _refresh,
             child: cases.isEmpty
                 ? ListView(
+                    padding: const EdgeInsets.all(16),
                     children: const [
-                      SizedBox(height: 120),
-                      EmptyView(
-                        message:
-                            'No account notices. You are in good standing.',
+                      SizedBox(height: 80),
+                      AppEmptyState(
                         icon: Icons.verified_user_outlined,
+                        title: 'No enforcement cases',
+                        message:
+                            'No safety or conduct cases affect your '
+                            'account. Keep bookings and communication on '
+                            'Oncall to stay in good standing.',
                       ),
                     ],
                   )
@@ -71,13 +78,40 @@ class _EnforcementCasesListScreenState
                     itemBuilder: (context, index) {
                       final c = cases[index];
 
-                      return Card(
-                        child: ListTile(
-                          title: Text(humanizeStatus(c.violationCategory)),
-                          subtitle: Text(formatDate(c.createdAt)),
-                          trailing: StatusChip(c.status),
-                          onTap: () =>
-                              context.push('/enforcement-cases/${c.id}'),
+                      return AppCard(
+                        onTap: () => context.push('/enforcement-cases/${c.id}'),
+                        padding: const EdgeInsets.all(16),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    humanizeStatus(c.violationCategory),
+                                    style: const TextStyle(
+                                      fontFamily: 'Poppins',
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.ink,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'Action: ${c.action != null ? humanizeStatus(c.action!) : 'Awaiting admin review'} · '
+                                    'opened ${formatDate(c.createdAt)}',
+                                    style: const TextStyle(
+                                      fontFamily: 'Poppins',
+                                      fontSize: 13,
+                                      color: AppColors.inkMuted,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            StatusChip(c.status),
+                          ],
                         ),
                       );
                     },

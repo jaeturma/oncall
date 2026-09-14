@@ -32,7 +32,7 @@ class _CustomerShellState extends State<CustomerShell> {
       body: IndexedStack(index: _index, children: _tabs),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
-        onDestinationSelected: (value) => setState(() => _index = value),
+        onDestinationSelected: (index) => setState(() => _index = index),
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.home_outlined),

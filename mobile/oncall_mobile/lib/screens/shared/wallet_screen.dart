@@ -4,7 +4,10 @@ import 'package:provider/provider.dart';
 
 import '../../core/formatters.dart';
 import '../../data/wallet_repository.dart';
+import '../../theme/app_colors.dart';
+import '../../widgets/app_card.dart';
 import '../../widgets/common.dart';
+import '../../widgets/stat_card.dart';
 
 class WalletScreen extends StatefulWidget {
   const WalletScreen({super.key});
@@ -61,61 +64,87 @@ class _WalletScreenState extends State<WalletScreen> {
             child: ListView(
               padding: const EdgeInsets.all(16),
               children: [
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('Available balance'),
-                        Text(
-                          formatPeso(overview.availableBalance),
-                          style: Theme.of(context).textTheme.headlineMedium,
-                        ),
-                        if (overview.pendingBalance > 0) ...[
-                          const SizedBox(height: 8),
-                          Text(
-                            'Pending: ${formatPeso(overview.pendingBalance)}',
-                          ),
-                        ],
-                        const SizedBox(height: 16),
-                        FilledButton.icon(
-                          onPressed: () =>
-                              context.push('/wallet/withdrawals/new'),
-                          icon: const Icon(Icons.arrow_downward),
-                          label: const Text('Cash out'),
-                        ),
-                      ],
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Expanded(
+                      child: StatCard(
+                        label: 'Available balance',
+                        value: formatPeso(overview.availableBalance),
+                        hint: 'Ready to withdraw',
+                        icon: Icons.account_balance_wallet_outlined,
+                        tone: StatCardTone.accent,
+                      ),
                     ),
-                  ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: StatCard(
+                        label: 'Pending',
+                        value: formatPeso(overview.pendingBalance),
+                        hint: 'Not yet withdrawable',
+                        icon: Icons.schedule_outlined,
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: () => context.push('/wallet/withdrawals/new'),
+                    icon: const Icon(Icons.arrow_downward),
+                    label: const Text('Cash out'),
+                  ),
+                ),
+                const SizedBox(height: 24),
                 Text(
                   'Recent activity',
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
+                const SizedBox(height: 8),
                 if (overview.page.items.isEmpty)
                   const Padding(
                     padding: EdgeInsets.only(top: 12),
                     child: EmptyView(message: 'No wallet activity yet.'),
-                  ),
-                for (final transaction in overview.page.items)
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: Icon(
-                      transaction.isCredit
-                          ? Icons.add_circle_outline
-                          : Icons.remove_circle_outline,
-                      color: transaction.isCredit ? Colors.green : Colors.red,
+                  )
+                else
+                  AppCard(
+                    padding: EdgeInsets.zero,
+                    child: Column(
+                      children: [
+                        for (final transaction in overview.page.items) ...[
+                          ListTile(
+                            leading: Icon(
+                              transaction.isCredit
+                                  ? Icons.add_circle_outline
+                                  : Icons.remove_circle_outline,
+                              color: transaction.isCredit
+                                  ? AppColors.success700
+                                  : AppColors.danger700,
+                            ),
+                            title: Text(humanizeStatus(transaction.type)),
+                            subtitle: Text(
+                              [
+                                transaction.description,
+                                formatDateTime(transaction.createdAt),
+                              ].whereType<String>().join(' · '),
+                            ),
+                            trailing: Text(
+                              formatPeso(transaction.amount),
+                              style: TextStyle(
+                                fontFamily: 'Poppins',
+                                fontWeight: FontWeight.w600,
+                                color: transaction.isCredit
+                                    ? AppColors.success700
+                                    : AppColors.danger700,
+                              ),
+                            ),
+                          ),
+                          if (transaction != overview.page.items.last)
+                            const Divider(height: 1, color: AppColors.line),
+                        ],
+                      ],
                     ),
-                    title: Text(humanizeStatus(transaction.type)),
-                    subtitle: Text(
-                      [
-                        transaction.description,
-                        formatDateTime(transaction.createdAt),
-                      ].whereType<String>().join(' · '),
-                    ),
-                    trailing: Text(formatPeso(transaction.amount)),
                   ),
               ],
             ),

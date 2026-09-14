@@ -6,6 +6,9 @@ import '../../core/formatters.dart';
 import '../../data/job_repository.dart';
 import '../../models/job.dart';
 import '../../models/paginated.dart';
+import '../../theme/app_colors.dart';
+import '../../widgets/app_card.dart';
+import '../../widgets/app_empty_state.dart';
 import '../../widgets/common.dart';
 
 class JobsScreen extends StatefulWidget {
@@ -53,11 +56,15 @@ class _JobsScreenState extends State<JobsScreen> {
             onRefresh: _refresh,
             child: jobs.isEmpty
                 ? ListView(
+                    padding: const EdgeInsets.all(16),
                     children: const [
-                      SizedBox(height: 120),
-                      EmptyView(
-                        message: 'No jobs yet.',
-                        icon: Icons.work_off_outlined,
+                      SizedBox(height: 80),
+                      AppEmptyState(
+                        icon: Icons.work_outline,
+                        title: 'No confirmed bookings yet',
+                        message:
+                            'Accepted service requests become bookings and '
+                            'show up here.',
                       ),
                     ],
                   )
@@ -68,17 +75,44 @@ class _JobsScreenState extends State<JobsScreen> {
                     itemBuilder: (context, index) {
                       final job = jobs[index];
 
-                      return Card(
-                        child: ListTile(
-                          title: Text(job.service?.name ?? 'Job #${job.id}'),
-                          subtitle: Text(
-                            [
-                              job.serviceFinder?.name,
-                              formatPeso(job.agreedPrice),
-                            ].whereType<String>().join(' · '),
-                          ),
-                          trailing: StatusChip(job.status),
-                          onTap: () => context.push('/jobs/${job.id}'),
+                      return AppCard(
+                        onTap: () => context.push('/jobs/${job.id}'),
+                        padding: const EdgeInsets.all(16),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    job.service?.name ?? 'Job #${job.id}',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      fontFamily: 'Poppins',
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.ink,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    [
+                                      job.serviceFinder?.name,
+                                      formatPeso(job.agreedPrice),
+                                    ].whereType<String>().join(' · '),
+                                    style: const TextStyle(
+                                      fontFamily: 'Poppins',
+                                      fontSize: 13,
+                                      color: AppColors.inkSecondary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            StatusChip(job.status),
+                          ],
                         ),
                       );
                     },

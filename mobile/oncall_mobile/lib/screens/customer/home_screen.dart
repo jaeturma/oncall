@@ -6,6 +6,7 @@ import '../../data/catalog_repository.dart';
 import '../../data/location_repository.dart';
 import '../../models/catalog.dart';
 import '../../state/auth_state.dart';
+import '../../theme/app_button_styles.dart';
 import '../../widgets/common.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -119,10 +120,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 const SizedBox(height: 12),
                 DropdownButtonFormField<ServiceCategory>(
                   initialValue: _category,
-                  decoration: const InputDecoration(
-                    labelText: 'Category',
-                    border: OutlineInputBorder(),
-                  ),
+                  decoration: const InputDecoration(labelText: 'Category'),
                   items: categories
                       .map(
                         (c) => DropdownMenuItem(value: c, child: Text(c.name)),
@@ -138,7 +136,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   initialValue: _service,
                   decoration: const InputDecoration(
                     labelText: 'Specific service (optional)',
-                    border: OutlineInputBorder(),
                   ),
                   items: services
                       .map(
@@ -157,10 +154,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 const SizedBox(height: 12),
                 DropdownButtonFormField<Province>(
                   initialValue: _province,
-                  decoration: const InputDecoration(
-                    labelText: 'Province',
-                    border: OutlineInputBorder(),
-                  ),
+                  decoration: const InputDecoration(labelText: 'Province'),
                   items: provinces
                       .map(
                         (p) => DropdownMenuItem(value: p, child: Text(p.name)),
@@ -173,7 +167,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   initialValue: _municipality,
                   decoration: const InputDecoration(
                     labelText: 'City / municipality (optional)',
-                    border: OutlineInputBorder(),
                   ),
                   items: _municipalities
                       .map(
@@ -192,6 +185,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 const SizedBox(height: 12),
                 FilledButton.icon(
+                  style: AppButtonStyles.lg,
                   onPressed: _search,
                   icon: const Icon(Icons.search),
                   label: const Text('Find providers'),

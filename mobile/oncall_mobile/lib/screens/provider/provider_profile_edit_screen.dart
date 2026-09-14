@@ -7,6 +7,7 @@ import '../../data/location_repository.dart';
 import '../../data/provider_repository.dart';
 import '../../models/catalog.dart';
 import '../../models/provider_profile.dart';
+import '../../theme/app_colors.dart';
 import '../../widgets/common.dart';
 
 class ProviderProfileEditScreen extends StatefulWidget {
@@ -155,15 +156,15 @@ class _ProviderProfileEditScreenState extends State<ProviderProfileEditScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 if (_error != null) ...[
-                  Text(_error!, style: TextStyle(color: Colors.red.shade700)),
+                  Text(
+                    _error!,
+                    style: const TextStyle(color: AppColors.danger700),
+                  ),
                   const SizedBox(height: 12),
                 ],
                 TextField(
                   controller: _bioController,
-                  decoration: const InputDecoration(
-                    labelText: 'Bio',
-                    border: OutlineInputBorder(),
-                  ),
+                  decoration: const InputDecoration(labelText: 'Bio'),
                   maxLines: 4,
                 ),
                 const SizedBox(height: 12),
@@ -171,17 +172,13 @@ class _ProviderProfileEditScreenState extends State<ProviderProfileEditScreen> {
                   controller: _radiusController,
                   decoration: const InputDecoration(
                     labelText: 'Service radius (km, optional)',
-                    border: OutlineInputBorder(),
                   ),
                   keyboardType: TextInputType.number,
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<Province>(
                   initialValue: _province,
-                  decoration: const InputDecoration(
-                    labelText: 'Province',
-                    border: OutlineInputBorder(),
-                  ),
+                  decoration: const InputDecoration(labelText: 'Province'),
                   items: provinces
                       .map(
                         (p) => DropdownMenuItem(value: p, child: Text(p.name)),
@@ -194,7 +191,6 @@ class _ProviderProfileEditScreenState extends State<ProviderProfileEditScreen> {
                   initialValue: _municipality,
                   decoration: const InputDecoration(
                     labelText: 'City / municipality',
-                    border: OutlineInputBorder(),
                   ),
                   items: _municipalities
                       .map(

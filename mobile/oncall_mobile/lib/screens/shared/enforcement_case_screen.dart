@@ -5,6 +5,8 @@ import '../../core/api_exception.dart';
 import '../../core/formatters.dart';
 import '../../data/enforcement_repository.dart';
 import '../../models/enforcement_case.dart';
+import '../../theme/app_colors.dart';
+import '../../widgets/app_card.dart';
 import '../../widgets/common.dart';
 
 class EnforcementCaseScreen extends StatefulWidget {
@@ -107,43 +109,96 @@ class _EnforcementCaseScreenState extends State<EnforcementCaseScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      humanizeStatus(c.violationCategory),
-                      style: Theme.of(context).textTheme.headlineSmall,
-                    ),
-                    StatusChip(c.status),
-                  ],
+                AppCard(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              humanizeStatus(c.violationCategory),
+                              style: Theme.of(context).textTheme.headlineSmall,
+                            ),
+                          ),
+                          StatusChip(c.status),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        'Severity: ${humanizeStatus(c.severity)}',
+                        style: const TextStyle(
+                          fontFamily: 'Poppins',
+                          color: AppColors.inkSecondary,
+                        ),
+                      ),
+                      if (c.action != null)
+                        Text(
+                          'Action: ${humanizeStatus(c.action)}',
+                          style: const TextStyle(
+                            fontFamily: 'Poppins',
+                            color: AppColors.inkSecondary,
+                          ),
+                        ),
+                      if (c.startsAt != null)
+                        Text(
+                          'Effective: ${formatDate(c.startsAt)}${c.endsAt != null ? ' – ${formatDate(c.endsAt)}' : ''}',
+                          style: const TextStyle(
+                            fontFamily: 'Poppins',
+                            color: AppColors.inkSecondary,
+                          ),
+                        ),
+                      if (c.resolution != null) ...[
+                        const SizedBox(height: 12),
+                        Text(
+                          'Resolution',
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          c.resolution!,
+                          style: const TextStyle(
+                            fontFamily: 'Poppins',
+                            color: AppColors.inkSecondary,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 8),
-                Text('Severity: ${humanizeStatus(c.severity)}'),
-                if (c.action != null)
-                  Text('Action: ${humanizeStatus(c.action)}'),
-                if (c.startsAt != null)
-                  Text(
-                    'Effective: ${formatDate(c.startsAt)}${c.endsAt != null ? ' – ${formatDate(c.endsAt)}' : ''}',
-                  ),
-                if (c.resolution != null) ...[
-                  const SizedBox(height: 12),
-                  Text(
-                    'Resolution',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  Text(c.resolution!),
-                ],
                 const SizedBox(height: 16),
-                Text('Appeal status: ${humanizeStatus(c.appealStatus)}'),
-                if (c.appealReason != null)
-                  Text('Your appeal: ${c.appealReason}'),
-                if (c.canAppeal) ...[
-                  const SizedBox(height: 16),
-                  FilledButton(
-                    onPressed: _submitting ? null : _appeal,
-                    child: const Text('Appeal this case'),
+                AppCard(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Appeal status: ${humanizeStatus(c.appealStatus)}',
+                        style: const TextStyle(
+                          fontFamily: 'Poppins',
+                          color: AppColors.inkSecondary,
+                        ),
+                      ),
+                      if (c.appealReason != null) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          'Your appeal: ${c.appealReason}',
+                          style: const TextStyle(
+                            fontFamily: 'Poppins',
+                            color: AppColors.inkSecondary,
+                          ),
+                        ),
+                      ],
+                      if (c.canAppeal) ...[
+                        const SizedBox(height: 12),
+                        FilledButton(
+                          onPressed: _submitting ? null : _appeal,
+                          child: const Text('Appeal this case'),
+                        ),
+                      ],
+                    ],
                   ),
-                ],
+                ),
               ],
             ),
           );

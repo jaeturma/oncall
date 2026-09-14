@@ -6,6 +6,8 @@ import '../../core/formatters.dart';
 import '../../core/notification_targets.dart';
 import '../../data/notification_repository.dart';
 import '../../services/push_service.dart';
+import '../../theme/app_colors.dart';
+import '../../widgets/app_empty_state.dart';
 import '../../widgets/common.dart';
 
 class NotificationsScreen extends StatefulWidget {
@@ -77,46 +79,75 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             onRefresh: _refresh,
             child: notifications.isEmpty
                 ? ListView(
+                    padding: const EdgeInsets.all(16),
                     children: const [
-                      SizedBox(height: 120),
-                      EmptyView(
-                        message: 'No notifications yet.',
+                      SizedBox(height: 80),
+                      AppEmptyState(
                         icon: Icons.notifications_none,
+                        title: 'No notifications yet',
+                        message:
+                            'Updates about your requests, bookings, wallet, '
+                            'and account will land here.',
                       ),
                     ],
                   )
                 : ListView.separated(
                     itemCount: notifications.length,
-                    separatorBuilder: (_, _) => const Divider(height: 1),
+                    separatorBuilder: (_, _) =>
+                        const Divider(height: 1, color: AppColors.line),
                     itemBuilder: (context, index) {
                       final n = notifications[index];
 
-                      return ListTile(
-                        leading: Icon(
-                          n.isUnread ? Icons.circle : Icons.circle_outlined,
-                          size: 12,
-                          color: n.isUnread ? Colors.blue : Colors.grey,
+                      return Container(
+                        color: n.isUnread
+                            ? AppColors.gold50.withValues(alpha: 0.6)
+                            : null,
+                        child: ListTile(
+                          leading: Padding(
+                            padding: const EdgeInsets.only(top: 6),
+                            child: Container(
+                              width: 8,
+                              height: 8,
+                              decoration: BoxDecoration(
+                                color: n.isUnread
+                                    ? AppColors.gold500
+                                    : Colors.transparent,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                          ),
+                          title: Text(
+                            n.title,
+                            style: const TextStyle(
+                              fontFamily: 'Poppins',
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.ink,
+                            ),
+                          ),
+                          subtitle: Text(
+                            n.body.isEmpty
+                                ? formatDateTime(n.createdAt)
+                                : '${n.body}\n${formatDateTime(n.createdAt)}',
+                            style: const TextStyle(
+                              fontFamily: 'Poppins',
+                              color: AppColors.inkSecondary,
+                            ),
+                          ),
+                          isThreeLine: n.body.isNotEmpty,
+                          onTap: () async {
+                            final route = notificationRouteFor(n.target);
+                            await context
+                                .read<NotificationRepository>()
+                                .markRead(n.id);
+                            if (!context.mounted) {
+                              return;
+                            }
+                            await _refresh();
+                            if (route != null && context.mounted) {
+                              context.push(route);
+                            }
+                          },
                         ),
-                        title: Text(n.title),
-                        subtitle: Text(
-                          n.body.isEmpty
-                              ? formatDateTime(n.createdAt)
-                              : '${n.body}\n${formatDateTime(n.createdAt)}',
-                        ),
-                        isThreeLine: n.body.isNotEmpty,
-                        onTap: () async {
-                          final route = notificationRouteFor(n.target);
-                          await context.read<NotificationRepository>().markRead(
-                            n.id,
-                          );
-                          if (!context.mounted) {
-                            return;
-                          }
-                          await _refresh();
-                          if (route != null && context.mounted) {
-                            context.push(route);
-                          }
-                        },
                       );
                     },
                   ),

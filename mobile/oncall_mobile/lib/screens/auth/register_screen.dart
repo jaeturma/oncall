@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../../models/user.dart';
 import '../../state/auth_state.dart';
+import '../../theme/app_colors.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -76,7 +77,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 if (_error != null) ...[
                   Text(
                     _error!,
-                    style: TextStyle(color: Colors.red.shade700),
+                    style: const TextStyle(color: AppColors.danger700),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 16),
@@ -101,10 +102,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _nameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Full name',
-                    border: OutlineInputBorder(),
-                  ),
+                  decoration: const InputDecoration(labelText: 'Full name'),
                   validator: (value) => (value == null || value.isEmpty)
                       ? 'Name is required'
                       : null,
@@ -113,10 +111,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 TextFormField(
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
-                  decoration: const InputDecoration(
-                    labelText: 'Email',
-                    border: OutlineInputBorder(),
-                  ),
+                  decoration: const InputDecoration(labelText: 'Email'),
                   validator: (value) => (value == null || value.isEmpty)
                       ? 'Email is required'
                       : null,
@@ -127,17 +122,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   keyboardType: TextInputType.phone,
                   decoration: const InputDecoration(
                     labelText: 'Mobile number (optional)',
-                    border: OutlineInputBorder(),
                   ),
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _passwordController,
                   obscureText: true,
-                  decoration: const InputDecoration(
-                    labelText: 'Password',
-                    border: OutlineInputBorder(),
-                  ),
+                  decoration: const InputDecoration(labelText: 'Password'),
                   validator: (value) => (value == null || value.length < 8)
                       ? 'At least 8 characters'
                       : null,
@@ -148,7 +139,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   keyboardType: TextInputType.emailAddress,
                   decoration: const InputDecoration(
                     labelText: "Sponsor's email (optional)",
-                    border: OutlineInputBorder(),
                   ),
                 ),
                 const SizedBox(height: 24),

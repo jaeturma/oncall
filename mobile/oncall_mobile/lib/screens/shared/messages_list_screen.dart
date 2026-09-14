@@ -6,6 +6,10 @@ import '../../core/formatters.dart';
 import '../../data/messages_repository.dart';
 import '../../models/conversation.dart';
 import '../../models/paginated.dart';
+import '../../state/auth_state.dart';
+import '../../theme/app_colors.dart';
+import '../../widgets/app_empty_state.dart';
+import '../../widgets/avatar.dart';
 import '../../widgets/common.dart';
 
 class MessagesListScreen extends StatefulWidget {
@@ -48,58 +52,95 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
           }
 
           final conversations = snapshot.data!.items;
+          final myId = context.watch<AuthState>().user?.id;
 
           return RefreshIndicator(
             onRefresh: _refresh,
             child: conversations.isEmpty
                 ? ListView(
+                    padding: const EdgeInsets.all(16),
                     children: const [
-                      SizedBox(height: 120),
-                      EmptyView(
-                        message: 'No conversations yet.',
+                      SizedBox(height: 80),
+                      AppEmptyState(
                         icon: Icons.chat_bubble_outline,
+                        title: 'No conversations yet',
+                        message:
+                            'Once a booking is confirmed, messages you send '
+                            'or receive on that job will appear here.',
                       ),
                     ],
                   )
                 : ListView.separated(
                     itemCount: conversations.length,
-                    separatorBuilder: (_, _) => const Divider(height: 1),
+                    separatorBuilder: (_, _) =>
+                        const Divider(height: 1, color: AppColors.line),
                     itemBuilder: (context, index) {
                       final c = conversations[index];
+                      final unread = c.unreadCount > 0;
+                      final last = c.latestMessage;
+                      final preview = last == null
+                          ? c.service?.name ?? ''
+                          : '${last.senderId == myId ? 'You: ' : ''}${last.body}';
 
-                      return ListTile(
-                        leading: CircleAvatar(
-                          child: Text(
-                            c.withParticipant.name.isNotEmpty
-                                ? c.withParticipant.name[0]
-                                : '?',
+                      return Container(
+                        color: unread
+                            ? AppColors.gold50.withValues(alpha: 0.6)
+                            : null,
+                        child: ListTile(
+                          leading: Avatar(
+                            name: c.withParticipant.name,
+                            size: AvatarSize.md,
                           ),
-                        ),
-                        title: Text(c.withParticipant.name),
-                        subtitle: Text(
-                          c.latestMessage?.body ?? c.service?.name ?? '',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        trailing: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Text(
-                              formatDate(c.latestMessage?.createdAt),
-                              style: Theme.of(context).textTheme.bodySmall,
+                          title: Text(
+                            c.withParticipant.name,
+                            style: const TextStyle(
+                              fontFamily: 'Poppins',
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.ink,
                             ),
-                            if (c.unreadCount > 0)
-                              CircleAvatar(
-                                radius: 9,
-                                child: Text(
-                                  '${c.unreadCount}',
-                                  style: const TextStyle(fontSize: 11),
+                          ),
+                          subtitle: Text(
+                            preview,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontFamily: 'Poppins',
+                              fontWeight: unread
+                                  ? FontWeight.w600
+                                  : FontWeight.w400,
+                              color: unread
+                                  ? AppColors.ink
+                                  : AppColors.inkSecondary,
+                            ),
+                          ),
+                          trailing: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Text(
+                                formatDate(c.latestMessage?.createdAt),
+                                style: const TextStyle(
+                                  fontFamily: 'Poppins',
+                                  fontSize: 12,
+                                  color: AppColors.inkMuted,
                                 ),
                               ),
-                          ],
+                              if (unread) ...[
+                                const SizedBox(height: 6),
+                                Container(
+                                  width: 10,
+                                  height: 10,
+                                  decoration: const BoxDecoration(
+                                    color: AppColors.gold500,
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                          onTap: () =>
+                              context.push('/conversations/${c.jobId}'),
                         ),
-                        onTap: () => context.push('/conversations/${c.jobId}'),
                       );
                     },
                   ),

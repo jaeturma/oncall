@@ -25,6 +25,7 @@ import 'data/withdrawal_repository.dart';
 import 'router.dart';
 import 'services/push_service.dart';
 import 'state/auth_state.dart';
+import 'theme/app_theme.dart';
 
 class OncallApp extends StatefulWidget {
   const OncallApp({super.key});
@@ -139,10 +140,11 @@ class _OncallAppState extends State<OncallApp> {
       child: MaterialApp.router(
         title: 'Oncall',
         debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          colorSchemeSeed: const Color(0xFF0B3D91),
-          useMaterial3: true,
-        ),
+        // Laravel has no dark theme, so force light rather than let a
+        // system-dark device flip to an unrelated Material palette.
+        theme: AppTheme.light,
+        darkTheme: AppTheme.light,
+        themeMode: ThemeMode.light,
         routerConfig: _router,
       ),
     );

@@ -6,6 +6,7 @@ import '../../core/api_exception.dart';
 import '../../data/provider_search_repository.dart';
 import '../../data/service_request_repository.dart';
 import '../../models/provider_profile.dart';
+import '../../theme/app_colors.dart';
 import '../../widgets/common.dart';
 
 const _urgencies = [
@@ -150,15 +151,15 @@ class _RequestServiceScreenState extends State<RequestServiceScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   if (_error != null) ...[
-                    Text(_error!, style: TextStyle(color: Colors.red.shade700)),
+                    Text(
+                      _error!,
+                      style: const TextStyle(color: AppColors.danger700),
+                    ),
                     const SizedBox(height: 12),
                   ],
                   DropdownButtonFormField<int>(
                     initialValue: _serviceId,
-                    decoration: const InputDecoration(
-                      labelText: 'Service',
-                      border: OutlineInputBorder(),
-                    ),
+                    decoration: const InputDecoration(labelText: 'Service'),
                     items: services
                         .where((s) => s.service != null)
                         .map(
@@ -175,7 +176,6 @@ class _RequestServiceScreenState extends State<RequestServiceScreen> {
                     controller: _titleController,
                     decoration: const InputDecoration(
                       labelText: 'Title',
-                      border: OutlineInputBorder(),
                       helperText:
                           'No emails, phone numbers, or social handles.',
                     ),
@@ -188,7 +188,6 @@ class _RequestServiceScreenState extends State<RequestServiceScreen> {
                     controller: _descriptionController,
                     decoration: const InputDecoration(
                       labelText: 'Details (optional)',
-                      border: OutlineInputBorder(),
                     ),
                     maxLength: 3000,
                     maxLines: 4,
@@ -223,7 +222,6 @@ class _RequestServiceScreenState extends State<RequestServiceScreen> {
                           controller: _budgetMinController,
                           decoration: const InputDecoration(
                             labelText: 'Budget min (optional)',
-                            border: OutlineInputBorder(),
                           ),
                           keyboardType: TextInputType.number,
                         ),
@@ -234,7 +232,6 @@ class _RequestServiceScreenState extends State<RequestServiceScreen> {
                           controller: _budgetMaxController,
                           decoration: const InputDecoration(
                             labelText: 'Budget max (optional)',
-                            border: OutlineInputBorder(),
                           ),
                           keyboardType: TextInputType.number,
                         ),

@@ -6,7 +6,11 @@ import '../../core/api_client.dart';
 import '../../core/formatters.dart';
 import '../../models/job.dart';
 import '../../models/provider_profile.dart';
+import '../../widgets/availability_badge.dart';
+import '../../widgets/avatar.dart';
 import '../../widgets/common.dart';
+import '../../widgets/rating_summary.dart';
+import '../../widgets/verification_badge.dart';
 
 class ProviderProfileScreen extends StatefulWidget {
   const ProviderProfileScreen({super.key, required this.providerProfileId});
@@ -60,33 +64,55 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(
-                  profile.displayName,
-                  style: Theme.of(context).textTheme.headlineSmall,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  [
-                    if (profile.rating != null)
-                      '★ ${profile.rating!.toStringAsFixed(1)} ($reviewsCount reviews)',
-                    '${profile.completedJobs} jobs completed',
-                  ].join(' · '),
-                ),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    StatusChip(profile.availabilityStatus),
+                    Avatar(
+                      name: profile.name,
+                      anonymous: profile.name == null,
+                      size: AvatarSize.xl,
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          AvailabilityBadge(status: profile.availabilityStatus),
+                          const SizedBox(height: 8),
+                          Text(
+                            profile.displayName,
+                            style: Theme.of(context).textTheme.headlineSmall,
+                          ),
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              RatingSummary(
+                                rating: profile.rating,
+                                reviewCount: reviewsCount,
+                              ),
+                              const SizedBox(width: 10),
+                              Text(
+                                '${profile.completedJobs} completed',
+                                style: Theme.of(context).textTheme.bodySmall,
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
                     if (profile.mobileVerified == true)
-                      const Chip(
-                        avatar: Icon(Icons.check, size: 16),
-                        label: Text('Mobile verified'),
-                      ),
+                      const VerificationBadge(type: 'mobile'),
                     for (final type in profile.verifiedDocumentTypes)
-                      Chip(
-                        avatar: const Icon(Icons.verified, size: 16),
-                        label: Text(humanizeStatus(type)),
-                      ),
+                      if (VerificationBadge.typeForDocumentType(type)
+                          case final mapped?)
+                        VerificationBadge(type: mapped),
                   ],
                 ),
                 if (profile.bio != null) ...[

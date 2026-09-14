@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../core/formatters.dart';
+import '../theme/app_colors.dart';
+import 'app_badge.dart';
 
 class LoadingView extends StatelessWidget {
   const LoadingView({super.key});
@@ -24,7 +26,11 @@ class ErrorView extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.error_outline, size: 40, color: Colors.redAccent),
+            const Icon(
+              Icons.error_outline,
+              size: 40,
+              color: AppColors.danger500,
+            ),
             const SizedBox(height: 12),
             Text(message, textAlign: TextAlign.center),
             if (onRetry != null) ...[
@@ -38,6 +44,9 @@ class ErrorView extends StatelessWidget {
   }
 }
 
+/// The lighter, text-only empty-state tier Laravel uses for nested/inline
+/// empties (e.g. an empty wallet ledger) — no icon/card, just a message.
+/// Full-section empties should use `AppEmptyState` instead.
 class EmptyView extends StatelessWidget {
   const EmptyView({
     super.key,
@@ -56,12 +65,12 @@ class EmptyView extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 40, color: Colors.grey),
+            Icon(icon, size: 40, color: AppColors.inkMuted),
             const SizedBox(height: 12),
             Text(
               message,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.grey),
+              style: const TextStyle(color: AppColors.inkMuted),
             ),
           ],
         ),
@@ -70,86 +79,98 @@ class EmptyView extends StatelessWidget {
   }
 }
 
+/// Mirrors Laravel's `ui/status-badge.blade.php` bucket-mapping exactly —
+/// every backend status vocabulary reads the same tone across the whole
+/// product. Uses `AppBadge` for the actual pill rendering.
 class StatusChip extends StatelessWidget {
-  const StatusChip(this.status, {super.key, this.color});
+  const StatusChip(this.status, {super.key});
 
   final String status;
-  final Color? color;
+
+  static const _success = {
+    'ACTIVE',
+    'VERIFIED',
+    'COMPLETED',
+    'ACCEPTED',
+    'RELEASED',
+    'APPROVED',
+    'AVAILABLE',
+    'RESOLVED',
+    'DISBURSED',
+    'PAID',
+    'POSTED',
+    'SENT',
+    'DELIVERED',
+  };
+  static const _warning = {
+    'PENDING',
+    'SUBMITTED',
+    'REQUESTED',
+    'SEARCHING',
+    'WARNING',
+    'FOR_DISBURSEMENT',
+    'ACCOUNTING_REVIEW',
+    'BUDGET_APPROVAL',
+    'OPEN',
+    'RETURNED',
+    'QUEUED',
+  };
+  static const _danger = {
+    'REJECTED',
+    'SUSPENDED',
+    'RESTRICTED',
+    'CANCELLED',
+    'DISPUTED',
+    'REVERSED',
+    'EXPIRED',
+    'DENIED',
+    'UPHELD',
+    'VOID',
+    'DISMISSED',
+    'FAILED',
+  };
+  static const _info = {
+    'IN_PROGRESS',
+    'ON_THE_WAY',
+    'UNDER_REVIEW',
+    'PARTIALLY_UPHELD',
+  };
 
   @override
   Widget build(BuildContext context) {
-    final resolvedColor = color ?? _colorFor(status);
-
-    return Chip(
-      label: Text(
-        humanizeStatus(status),
-        style: TextStyle(
-          color: resolvedColor,
-          fontWeight: FontWeight.w600,
-          fontSize: 12,
-        ),
-      ),
-      backgroundColor: resolvedColor.withValues(alpha: 0.12),
-      side: BorderSide.none,
-      padding: EdgeInsets.zero,
-      visualDensity: VisualDensity.compact,
-      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+    return AppBadge(
+      label: humanizeStatus(status),
+      tone: _toneFor(status),
+      dot: true,
     );
   }
 
-  Color _colorFor(String status) {
-    const positive = {
-      'ACTIVE',
-      'AVAILABLE',
-      'VERIFIED',
-      'COMPLETED',
-      'ACCEPTED',
-      'RELEASED',
-      'POSTED',
-      'APPROVED',
-      'CONFIRMATION',
-    };
-    const negative = {
-      'SUSPENDED',
-      'REJECTED',
-      'CANCELLED',
-      'RESTRICTED',
-      'REVERSED',
-      'DISPUTED',
-      'RETURNED',
-    };
-    const warning = {
-      'PENDING',
-      'SUBMITTED',
-      'WARNING',
-      'UNDER_REVIEW',
-      'REQUESTED',
-      'OPEN',
-      'BUSY',
-    };
-
-    if (positive.contains(status)) {
-      return Colors.green.shade700;
+  AppBadgeTone _toneFor(String status) {
+    if (_success.contains(status)) {
+      return AppBadgeTone.success;
     }
-    if (negative.contains(status)) {
-      return Colors.red.shade700;
+    if (_warning.contains(status)) {
+      return AppBadgeTone.warning;
     }
-    if (warning.contains(status)) {
-      return Colors.orange.shade800;
+    if (_danger.contains(status)) {
+      return AppBadgeTone.danger;
+    }
+    if (_info.contains(status)) {
+      return AppBadgeTone.info;
     }
 
-    return Colors.blueGrey;
+    return AppBadgeTone.neutral;
   }
 }
 
 Future<void> showErrorSnackBar(BuildContext context, String message) async {
   ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(content: Text(message), backgroundColor: Colors.red.shade700),
+    SnackBar(content: Text(message), backgroundColor: AppColors.danger600),
   );
 }
 
 Future<void> showSuccessSnackBar(BuildContext context, String message) async {
   ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(content: Text(message), backgroundColor: Colors.green.shade700),
+    SnackBar(content: Text(message), backgroundColor: AppColors.success600),
   );
 }

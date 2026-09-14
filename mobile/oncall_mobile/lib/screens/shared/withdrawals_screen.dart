@@ -5,7 +5,11 @@ import 'package:provider/provider.dart';
 import '../../core/api_exception.dart';
 import '../../core/formatters.dart';
 import '../../data/withdrawal_repository.dart';
+import '../../theme/app_colors.dart';
+import '../../widgets/app_card.dart';
+import '../../widgets/app_empty_state.dart';
 import '../../widgets/common.dart';
+import '../../widgets/withdrawal_status_list.dart';
 
 class WithdrawalsScreen extends StatefulWidget {
   const WithdrawalsScreen({super.key});
@@ -69,43 +73,67 @@ class _WithdrawalsScreenState extends State<WithdrawalsScreen> {
 
           return RefreshIndicator(
             onRefresh: _refresh,
-            child: withdrawals.isEmpty
-                ? ListView(
-                    children: const [
-                      SizedBox(height: 120),
-                      EmptyView(
-                        message: 'No cashout requests yet.',
-                        icon: Icons.receipt_long_outlined,
-                      ),
-                    ],
+            child: ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                AppCard(child: const WithdrawalStatusList()),
+                const SizedBox(height: 20),
+                if (withdrawals.isEmpty)
+                  const AppEmptyState(
+                    icon: Icons.receipt_long_outlined,
+                    title: 'No withdrawal requests yet',
+                    message:
+                        'Requests you submit will show their progress here.',
                   )
-                : ListView.separated(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: withdrawals.length,
-                    separatorBuilder: (_, _) => const SizedBox(height: 8),
-                    itemBuilder: (context, index) {
-                      final w = withdrawals[index];
-
-                      return Card(
-                        child: ListTile(
-                          title: Text(formatPeso(w.amount)),
-                          subtitle: Text(
-                            [
-                              w.payoutMethod,
-                              formatDate(w.createdAt),
-                              if (w.notes != null) w.notes,
-                            ].whereType<String>().join(' · '),
+                else
+                  for (final w in withdrawals) ...[
+                    AppCard(
+                      padding: const EdgeInsets.all(16),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  formatPeso(w.amount),
+                                  style: const TextStyle(
+                                    fontFamily: 'Poppins',
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.ink,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  [
+                                    w.payoutMethod,
+                                    formatDate(w.createdAt),
+                                    if (w.notes != null) w.notes,
+                                  ].whereType<String>().join(' · '),
+                                  style: const TextStyle(
+                                    fontFamily: 'Poppins',
+                                    fontSize: 13,
+                                    color: AppColors.inkSecondary,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                          trailing: w.isCancellable
+                          const SizedBox(width: 12),
+                          w.isCancellable
                               ? TextButton(
                                   onPressed: () => _cancel(w.id),
                                   child: const Text('Cancel'),
                                 )
                               : StatusChip(w.status),
-                        ),
-                      );
-                    },
-                  ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                  ],
+              ],
+            ),
           );
         },
       ),

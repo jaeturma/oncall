@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../core/api_exception.dart';
 import '../../core/formatters.dart';
 import '../../data/withdrawal_repository.dart';
+import '../../theme/app_colors.dart';
 import '../../widgets/common.dart';
 
 class WithdrawalRequestScreen extends StatefulWidget {
@@ -89,7 +90,10 @@ class _WithdrawalRequestScreenState extends State<WithdrawalRequestScreen> {
                     Text('Available balance: ${formatPeso(available)}'),
                   const SizedBox(height: 12),
                   if (_error != null) ...[
-                    Text(_error!, style: TextStyle(color: Colors.red.shade700)),
+                    Text(
+                      _error!,
+                      style: const TextStyle(color: AppColors.danger700),
+                    ),
                     const SizedBox(height: 12),
                   ],
                   TextFormField(
@@ -97,10 +101,7 @@ class _WithdrawalRequestScreenState extends State<WithdrawalRequestScreen> {
                     keyboardType: const TextInputType.numberWithOptions(
                       decimal: true,
                     ),
-                    decoration: const InputDecoration(
-                      labelText: 'Amount (₱)',
-                      border: OutlineInputBorder(),
-                    ),
+                    decoration: const InputDecoration(labelText: 'Amount (₱)'),
                     validator: (value) =>
                         (double.tryParse(value ?? '') ?? 0) <= 0
                         ? 'Enter a valid amount'
@@ -111,7 +112,6 @@ class _WithdrawalRequestScreenState extends State<WithdrawalRequestScreen> {
                     controller: _methodController,
                     decoration: const InputDecoration(
                       labelText: 'Payout method (e.g. GCash)',
-                      border: OutlineInputBorder(),
                     ),
                     validator: (value) =>
                         (value == null || value.isEmpty) ? 'Required' : null,
@@ -121,7 +121,6 @@ class _WithdrawalRequestScreenState extends State<WithdrawalRequestScreen> {
                     controller: _referenceController,
                     decoration: const InputDecoration(
                       labelText: 'Account number / reference',
-                      border: OutlineInputBorder(),
                     ),
                     validator: (value) =>
                         (value == null || value.isEmpty) ? 'Required' : null,

@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/api_exception.dart';
-import '../../core/formatters.dart';
 import '../../data/job_repository.dart';
 import '../../models/job.dart';
 import '../../state/auth_state.dart';
+import '../../widgets/chat_bubble.dart';
 import '../../widgets/common.dart';
 
 class ConversationScreen extends StatefulWidget {
@@ -91,40 +91,12 @@ class _ConversationScreenState extends State<ConversationScreen> {
                     final message = messages[messages.length - 1 - index];
                     final isMine = message.sender?.id == myId;
 
-                    return Align(
-                      alignment: isMine
-                          ? Alignment.centerRight
-                          : Alignment.centerLeft,
-                      child: Container(
-                        margin: const EdgeInsets.symmetric(vertical: 4),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 10,
-                        ),
-                        constraints: BoxConstraints(
-                          maxWidth: MediaQuery.of(context).size.width * 0.75,
-                        ),
-                        decoration: BoxDecoration(
-                          color: isMine
-                              ? Theme.of(context).colorScheme.primaryContainer
-                              : Theme.of(
-                                  context,
-                                ).colorScheme.surfaceContainerHighest,
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(message.body),
-                            const SizedBox(height: 2),
-                            Text(
-                              formatDateTime(message.createdAt),
-                              style: Theme.of(context).textTheme.labelSmall,
-                            ),
-                          ],
-                        ),
-                      ),
+                    return ChatBubble(
+                      senderName: message.sender?.name ?? '',
+                      body: message.body,
+                      isMine: isMine,
+                      createdAt: message.createdAt,
+                      type: message.type,
                     );
                   },
                 );
@@ -140,10 +112,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
                   Expanded(
                     child: TextField(
                       controller: _messageController,
-                      decoration: const InputDecoration(
-                        hintText: 'Message',
-                        border: OutlineInputBorder(),
-                      ),
+                      decoration: const InputDecoration(hintText: 'Message'),
                       minLines: 1,
                       maxLines: 4,
                     ),

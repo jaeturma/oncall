@@ -10,6 +10,11 @@ import '../../data/mobile_verification_repository.dart';
 import '../../data/verification_repository.dart';
 import '../../models/verification.dart';
 import '../../state/auth_state.dart';
+import '../../theme/app_colors.dart';
+import '../../widgets/app_alert.dart';
+import '../../widgets/app_badge.dart';
+import '../../widgets/app_card.dart';
+import '../../widgets/app_empty_state.dart';
 import '../../widgets/common.dart';
 
 const _documentTypes = [
@@ -128,6 +133,11 @@ class _VerificationScreenState extends State<VerificationScreen> {
           }
 
           final documents = snapshot.data!;
+          final identityStatus =
+              context.watch<AuthState>().user?.identityVerificationStatus ??
+              'PENDING';
+          final awaitingReview = documents.any((d) => d.status == 'SUBMITTED');
+          final alert = _identityAlert(identityStatus, awaitingReview);
 
           return RefreshIndicator(
             onRefresh: _refresh,
@@ -135,29 +145,88 @@ class _VerificationScreenState extends State<VerificationScreen> {
               padding: const EdgeInsets.all(16),
               children: [
                 const _MobileVerificationCard(),
+                if (alert != null) ...[const SizedBox(height: 16), alert],
                 const SizedBox(height: 16),
-                Text(
-                  'Identity documents',
-                  style: Theme.of(context).textTheme.titleMedium,
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Identity documents',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    StatusChip(identityStatus),
+                  ],
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 10),
                 if (documents.isEmpty)
-                  const EmptyView(
-                    message: 'Submit a government ID to get identity-verified.',
+                  const AppEmptyState(
                     icon: Icons.badge_outlined,
+                    title: 'No documents submitted yet',
+                    message:
+                        'Your submissions and their review outcome will '
+                        'appear here.',
                   )
                 else
                   for (final doc in documents) ...[
-                    Card(
-                      child: ListTile(
-                        title: Text(humanizeStatus(doc.documentType)),
-                        subtitle: Text(
-                          [
-                            formatDate(doc.createdAt),
-                            if (doc.notes != null) doc.notes,
-                          ].whereType<String>().join(' · '),
-                        ),
-                        trailing: StatusChip(doc.status),
+                    AppCard(
+                      padding: const EdgeInsets.all(16),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  humanizeStatus(doc.documentType),
+                                  style: const TextStyle(
+                                    fontFamily: 'Poppins',
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.ink,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Submitted ${formatDate(doc.createdAt)}',
+                                  style: const TextStyle(
+                                    fontFamily: 'Poppins',
+                                    fontSize: 13,
+                                    color: AppColors.inkMuted,
+                                  ),
+                                ),
+                                if (doc.notes != null) ...[
+                                  const SizedBox(height: 4),
+                                  Text.rich(
+                                    TextSpan(
+                                      children: [
+                                        const TextSpan(
+                                          text: 'Review notes: ',
+                                          style: TextStyle(
+                                            fontFamily: 'Poppins',
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w600,
+                                            color: AppColors.ink,
+                                          ),
+                                        ),
+                                        TextSpan(
+                                          text: doc.notes,
+                                          style: const TextStyle(
+                                            fontFamily: 'Poppins',
+                                            fontSize: 13,
+                                            color: AppColors.inkSecondary,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          StatusChip(doc.status),
+                        ],
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -168,6 +237,43 @@ class _VerificationScreenState extends State<VerificationScreen> {
         },
       ),
     );
+  }
+
+  /// Mirrors the conditional alert on Laravel's `verification/index.blade.php`
+  /// — same three states, driven the same way (a Submitted document counts
+  /// as "awaiting review" regardless of the user's own status field).
+  AppAlert? _identityAlert(String status, bool awaitingReview) {
+    if (status == 'VERIFIED') {
+      return const AppAlert(
+        tone: AppAlertTone.success,
+        title: 'Your identity is verified',
+        message:
+            'Your Identity Verified badge is active. You can submit another '
+            "document (for example a driver's or professional license) to "
+            'add more verifications.',
+      );
+    }
+    if (awaitingReview) {
+      return const AppAlert(
+        tone: AppAlertTone.warning,
+        title: 'Your document is being reviewed',
+        message:
+            "Oncall staff review submissions privately. You'll get a "
+            'notification when it\'s done. You can submit another document '
+            'after this review is completed.',
+      );
+    }
+    if (status == 'REJECTED') {
+      return const AppAlert(
+        tone: AppAlertTone.danger,
+        title: 'Your last submission was not approved',
+        message:
+            'Check the review notes below, then upload a clearer or '
+            'different document.',
+      );
+    }
+
+    return null;
   }
 }
 
@@ -334,61 +440,62 @@ class _MobileVerificationCardState extends State<_MobileVerificationCard> {
     final user = context.watch<AuthState>().user;
     final verified = user?.mobileVerified ?? false;
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Mobile number',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                if (verified)
-                  const Chip(
-                    avatar: Icon(Icons.check, size: 16),
-                    label: Text('Verified'),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 4),
-            Text(user?.phone ?? 'No mobile number on file'),
-            const SizedBox(height: 12),
-            if (_busy)
-              const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(8),
-                  child: CircularProgressIndicator(),
-                ),
-              )
-            else if (_cooldownRemaining > 0)
-              OutlinedButton(
-                onPressed: null,
-                child: Text('Resend available in ${_cooldownRemaining}s'),
-              )
-            else if (verified)
-              OutlinedButton(
-                onPressed: _startVerification,
-                child: const Text('Change mobile number'),
-              )
-            else ...[
-              FilledButton(
-                onPressed: _startVerification,
-                child: const Text('Verify mobile number'),
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Mobile number',
+                style: Theme.of(context).textTheme.titleMedium,
               ),
-              if (user?.phone != null) ...[
-                const SizedBox(height: 8),
-                TextButton(
-                  onPressed: _resend,
-                  child: const Text('Resend code'),
+              if (verified)
+                const AppBadge(
+                  label: 'Verified',
+                  tone: AppBadgeTone.success,
+                  icon: Icons.check,
                 ),
-              ],
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            user?.phone ?? 'No mobile number on file',
+            style: const TextStyle(
+              fontFamily: 'Poppins',
+              color: AppColors.inkSecondary,
+            ),
+          ),
+          const SizedBox(height: 12),
+          if (_busy)
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.all(8),
+                child: CircularProgressIndicator(),
+              ),
+            )
+          else if (_cooldownRemaining > 0)
+            OutlinedButton(
+              onPressed: null,
+              child: Text('Resend available in ${_cooldownRemaining}s'),
+            )
+          else if (verified)
+            OutlinedButton(
+              onPressed: _startVerification,
+              child: const Text('Change mobile number'),
+            )
+          else ...[
+            FilledButton(
+              onPressed: _startVerification,
+              child: const Text('Verify mobile number'),
+            ),
+            if (user?.phone != null) ...[
+              const SizedBox(height: 8),
+              TextButton(onPressed: _resend, child: const Text('Resend code')),
             ],
           ],
-        ),
+        ],
       ),
     );
   }

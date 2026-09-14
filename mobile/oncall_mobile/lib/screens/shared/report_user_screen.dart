@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 
 import '../../core/api_exception.dart';
 import '../../data/job_repository.dart';
+import '../../theme/app_colors.dart';
+import '../../widgets/app_alert.dart';
 import '../../widgets/common.dart';
 
 const _reportCategories = [
@@ -78,20 +80,23 @@ class _ReportUserScreenState extends State<ReportUserScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text(
-                'No enforcement is automatic — an admin reviews every report.',
+              const AppAlert(
+                tone: AppAlertTone.info,
+                message:
+                    'No enforcement is automatic — an admin reviews every '
+                    'report.',
               ),
               const SizedBox(height: 16),
               if (_error != null) ...[
-                Text(_error!, style: TextStyle(color: Colors.red.shade700)),
+                Text(
+                  _error!,
+                  style: const TextStyle(color: AppColors.danger700),
+                ),
                 const SizedBox(height: 12),
               ],
               DropdownButtonFormField<String>(
                 initialValue: _category,
-                decoration: const InputDecoration(
-                  labelText: 'What happened?',
-                  border: OutlineInputBorder(),
-                ),
+                decoration: const InputDecoration(labelText: 'What happened?'),
                 items: [
                   for (final (value, label) in _reportCategories)
                     DropdownMenuItem(value: value, child: Text(label)),
@@ -102,10 +107,7 @@ class _ReportUserScreenState extends State<ReportUserScreen> {
               const SizedBox(height: 12),
               TextFormField(
                 controller: _descriptionController,
-                decoration: const InputDecoration(
-                  labelText: 'Details',
-                  border: OutlineInputBorder(),
-                ),
+                decoration: const InputDecoration(labelText: 'Details'),
                 maxLines: 5,
                 maxLength: 3000,
                 validator: (value) => (value == null || value.isEmpty)
