@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
@@ -40,8 +38,13 @@ class PushService extends ChangeNotifier {
 
   static bool _firebaseReady = false;
 
+  // `defaultTargetPlatform` (not dart:io's `Platform`) so this compiles and
+  // safely evaluates to false on web, rather than dart:io simply not
+  // existing there.
   static bool get _supportsPush =>
-      !kIsWeb && (Platform.isAndroid || Platform.isIOS);
+      !kIsWeb &&
+      (defaultTargetPlatform == TargetPlatform.android ||
+          defaultTargetPlatform == TargetPlatform.iOS);
 
   /// Call once, before `runApp()`, so a cold-start tap's background handler
   /// is registered before any message can arrive. Static (and safe to call
@@ -105,7 +108,9 @@ class PushService extends ChangeNotifier {
 
       await _deviceRepository.register(
         installationId: await _deviceIdentity.installationId(),
-        platform: Platform.isIOS ? 'IOS' : 'ANDROID',
+        platform: defaultTargetPlatform == TargetPlatform.iOS
+            ? 'IOS'
+            : 'ANDROID',
         fcmToken: token,
       );
     } catch (error) {
