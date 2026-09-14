@@ -1,5 +1,8 @@
 @php
     $placeholders = $event['placeholders'];
+    // Built here, outside any {{ }} echo, so Blade's own brace-matching
+    // never has to scan past a literal '{{'/'}}' inside the expression.
+    $wrappedPlaceholders = array_map(fn (string $name): string => '{'.'{'.$name.'}'.'}', $placeholders);
 @endphp
 
 <x-layouts.admin :title="'Edit template — '.$eventKey" description="Leave a field blank to use the safe application default shown as its placeholder.">
@@ -12,8 +15,8 @@
             @if($placeholders === [])
                 <span class="italic">none for this event</span>
             @else
-                @foreach($placeholders as $placeholder)
-                    <code>@{{{{ $placeholder }}}}</code>
+                @foreach($wrappedPlaceholders as $wrapped)
+                    <code>{{ $wrapped }}</code>
                 @endforeach
             @endif
         </p>
