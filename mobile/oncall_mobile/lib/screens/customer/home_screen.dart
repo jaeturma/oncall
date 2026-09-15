@@ -5,7 +5,9 @@ import 'package:provider/provider.dart';
 import '../../data/catalog_repository.dart';
 import '../../data/location_repository.dart';
 import '../../models/catalog.dart';
+import '../../services/device_location_service.dart';
 import '../../state/auth_state.dart';
+import '../../state/location_state.dart';
 import '../../theme/app_button_styles.dart';
 import '../../widgets/common.dart';
 
@@ -25,12 +27,71 @@ class _HomeScreenState extends State<HomeScreen> {
   Municipality? _municipality;
   List<Municipality> _municipalities = [];
   bool _availableOnly = false;
+  int? _radiusKm;
 
   @override
   void initState() {
     super.initState();
     _load = _fetch();
+    context.read<LocationState>().loadRadiusPolicy();
   }
+
+  Future<void> _useCurrentLocation() async {
+    final locationState = context.read<LocationState>();
+    final granted = await locationState.useCurrentLocation();
+
+    if (!mounted) {
+      return;
+    }
+
+    if (!granted) {
+      showErrorSnackBar(context, _deniedMessage(locationState.lastStatus));
+
+      return;
+    }
+
+    setState(() => _radiusKm ??= locationState.defaultRadiusKm);
+
+    final resolvedProvince = locationState.resolvedArea?.province;
+    if (resolvedProvince == null) {
+      return;
+    }
+
+    final provinces = (await _load).$2;
+    final matchedProvince = provinces
+        .where((p) => p.id == resolvedProvince.id)
+        .firstOrNull;
+    if (matchedProvince == null || !mounted) {
+      return;
+    }
+
+    await _onProvinceChanged(matchedProvince);
+    if (!mounted) {
+      return;
+    }
+
+    final resolvedMunicipality = locationState.resolvedArea?.municipality;
+    if (resolvedMunicipality != null) {
+      final matchedMunicipality = _municipalities
+          .where((m) => m.id == resolvedMunicipality.id)
+          .firstOrNull;
+      if (matchedMunicipality != null) {
+        setState(() => _municipality = matchedMunicipality);
+      }
+    }
+  }
+
+  String _deniedMessage(DeviceLocationStatus? status) => switch (status) {
+    DeviceLocationStatus.permanentlyDenied =>
+      'Location access is permanently denied. Enable it in your device settings, or choose your province manually.',
+    DeviceLocationStatus.serviceDisabled =>
+      'Location services are turned off on this device. Choose your province manually.',
+    DeviceLocationStatus.denied =>
+      'Location permission was denied. Choose your province manually.',
+    DeviceLocationStatus.unsupported =>
+      'Current location is not supported on this device. Choose your province manually.',
+    _ => 'Could not get your current location. Choose your province manually.',
+  };
 
   Future<(List<ServiceCategory>, List<Province>)> _fetch() async {
     final catalogRepository = context.read<CatalogRepository>();
@@ -71,6 +132,9 @@ class _HomeScreenState extends State<HomeScreen> {
     final help = _service != null
         ? 'service:${_service!.id}'
         : 'category:${_category!.id}';
+    final locationState = context.read<LocationState>();
+    final useGps = locationState.hasCoordinates;
+
     context.push(
       Uri(
         path: '/search-results',
@@ -79,6 +143,9 @@ class _HomeScreenState extends State<HomeScreen> {
           'province_id': '${_province!.id}',
           if (_municipality != null) 'municipality_id': '${_municipality!.id}',
           if (_availableOnly) 'available_only': 'true',
+          if (useGps) 'latitude': '${locationState.latitude}',
+          if (useGps) 'longitude': '${locationState.longitude}',
+          if (useGps && _radiusKm != null) 'radius_km': '$_radiusKm',
         },
       ).toString(),
     );
@@ -152,6 +219,56 @@ class _HomeScreenState extends State<HomeScreen> {
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 const SizedBox(height: 12),
+                Consumer<LocationState>(
+                  builder: (context, locationState, _) => Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      OutlinedButton.icon(
+                        onPressed: locationState.isLocating
+                            ? null
+                            : _useCurrentLocation,
+                        icon: locationState.isLocating
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Icon(Icons.my_location),
+                        label: Text(
+                          locationState.hasCoordinates
+                              ? 'Using your current location'
+                              : 'Use my current location',
+                        ),
+                      ),
+                      if (locationState.hasCoordinates) ...[
+                        const SizedBox(height: 12),
+                        Text(
+                          'Search radius',
+                          style: Theme.of(context).textTheme.labelLarge,
+                        ),
+                        const SizedBox(height: 6),
+                        Wrap(
+                          spacing: 8,
+                          children: [
+                            for (final choice in locationState.radiusChoices)
+                              ChoiceChip(
+                                label: Text('${choice}km'),
+                                selected:
+                                    (_radiusKm ??
+                                        locationState.defaultRadiusKm) ==
+                                    choice,
+                                onSelected: (_) =>
+                                    setState(() => _radiusKm = choice),
+                              ),
+                          ],
+                        ),
+                      ],
+                      const SizedBox(height: 12),
+                    ],
+                  ),
+                ),
                 DropdownButtonFormField<Province>(
                   initialValue: _province,
                   decoration: const InputDecoration(labelText: 'Province'),

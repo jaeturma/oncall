@@ -23,8 +23,10 @@ import 'data/verification_repository.dart';
 import 'data/wallet_repository.dart';
 import 'data/withdrawal_repository.dart';
 import 'router.dart';
+import 'services/device_location_service.dart';
 import 'services/push_service.dart';
 import 'state/auth_state.dart';
+import 'state/location_state.dart';
 import 'theme/app_theme.dart';
 
 class OncallApp extends StatefulWidget {
@@ -40,6 +42,7 @@ class _OncallAppState extends State<OncallApp> {
   late final DeviceIdentity _deviceIdentity;
   late final PushService _pushService;
   late final AuthState _authState;
+  late final LocationState _locationState;
   late final GoRouter _router;
 
   @override
@@ -58,6 +61,11 @@ class _OncallAppState extends State<OncallApp> {
       authRepository: AuthRepository(_apiClient),
       profileRepository: ProfileRepository(_apiClient),
       deviceIdentity: _deviceIdentity,
+    );
+    _locationState = LocationState(
+      deviceLocationService: DeviceLocationService(),
+      locationRepository: LocationRepository(_apiClient),
+      catalogRepository: CatalogRepository(_apiClient),
     );
     _router = buildRouter(_authState);
     _authState.bootstrap();
@@ -93,6 +101,7 @@ class _OncallAppState extends State<OncallApp> {
       providers: [
         ChangeNotifierProvider<AuthState>.value(value: _authState),
         ChangeNotifierProvider<PushService>.value(value: _pushService),
+        ChangeNotifierProvider<LocationState>.value(value: _locationState),
         Provider<ApiClient>.value(value: _apiClient),
         Provider<AuthRepository>(create: (_) => AuthRepository(_apiClient)),
         Provider<ProfileRepository>(

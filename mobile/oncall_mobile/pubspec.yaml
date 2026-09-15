@@ -43,6 +43,15 @@ dependencies:
   firebase_core: ^4.14.0
   firebase_messaging: ^16.6.0
 
+  # Phase O — location/maps. geolocator handles GPS + permission status;
+  # permission_handler backs its Android/iOS runtime prompts; flutter_map
+  # renders OpenStreetMap tiles (no API key/billing, matches the map
+  # provider chosen in docs/architecture/LOCATION_MAPS_ARCHITECTURE.md).
+  geolocator: ^14.0.3
+  permission_handler: ^13.0.2
+  flutter_map: ^8.3.2
+  latlong2: ^0.10.1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

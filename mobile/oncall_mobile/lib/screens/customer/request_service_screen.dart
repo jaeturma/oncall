@@ -6,6 +6,7 @@ import '../../core/api_exception.dart';
 import '../../data/provider_search_repository.dart';
 import '../../data/service_request_repository.dart';
 import '../../models/provider_profile.dart';
+import '../../state/location_state.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/common.dart';
 
@@ -37,7 +38,16 @@ class _RequestServiceScreenState extends State<RequestServiceScreen> {
   DateTime? _neededAt;
   bool _safetyAcknowledged = false;
   bool _submitting = false;
+  bool _locating = false;
   String? _error;
+
+  // Service-request location is its own snapshot — deliberately never
+  // auto-equal to the customer's profile/current location until they
+  // explicitly choose it (Phase O §18).
+  double? _requestLatitude;
+  double? _requestLongitude;
+  String? _requestLocationSource;
+  String? _requestAreaLabel;
 
   @override
   void initState() {
@@ -83,6 +93,61 @@ class _RequestServiceScreenState extends State<RequestServiceScreen> {
     );
   }
 
+  Future<void> _useCurrentLocationForRequest() async {
+    setState(() => _locating = true);
+    final locationState = context.read<LocationState>();
+    final granted = await locationState.useCurrentLocation();
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _locating = false;
+      if (granted) {
+        _requestLatitude = locationState.latitude;
+        _requestLongitude = locationState.longitude;
+        _requestLocationSource = 'GPS';
+        _requestAreaLabel = locationState.resolvedArea?.label ??
+            [
+              locationState.resolvedArea?.municipality?.name,
+              locationState.resolvedArea?.province?.name,
+            ].whereType<String>().join(', ');
+      }
+    });
+    if (!granted && mounted) {
+      showErrorSnackBar(
+        context,
+        'Could not get your current location. Try Choose on map instead.',
+      );
+    }
+  }
+
+  Future<void> _chooseOnMap() async {
+    final result = await context.push<Map<String, double>>(
+      '/location-picker',
+      extra: _requestLatitude != null && _requestLongitude != null
+          ? {'latitude': _requestLatitude!, 'longitude': _requestLongitude!}
+          : null,
+    );
+    if (result == null || !mounted) {
+      return;
+    }
+    setState(() {
+      _requestLatitude = result['latitude'];
+      _requestLongitude = result['longitude'];
+      _requestLocationSource = 'MAP_PIN';
+      _requestAreaLabel = 'Pinned on map';
+    });
+  }
+
+  void _clearRequestLocation() {
+    setState(() {
+      _requestLatitude = null;
+      _requestLongitude = null;
+      _requestLocationSource = null;
+      _requestAreaLabel = null;
+    });
+  }
+
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate() || _serviceId == null) {
       showErrorSnackBar(context, 'Please choose a service.');
@@ -106,6 +171,9 @@ class _RequestServiceScreenState extends State<RequestServiceScreen> {
             providerProfileId: widget.providerProfileId,
             serviceId: _serviceId!,
             provinceId: (await _load).province?.id ?? 0,
+            latitude: _requestLatitude,
+            longitude: _requestLongitude,
+            locationSource: _requestLocationSource,
             title: _titleController.text.trim(),
             description: _descriptionController.text.trim(),
             urgency: _urgency,
@@ -192,6 +260,60 @@ class _RequestServiceScreenState extends State<RequestServiceScreen> {
                     maxLength: 3000,
                     maxLines: 4,
                   ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Service location (optional)',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    "Defaults to the provider's general area. Add an exact "
+                    'location if it helps — it stays hidden until the '
+                    'provider accepts.',
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.copyWith(color: AppColors.inkMuted),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      OutlinedButton.icon(
+                        onPressed: _locating
+                            ? null
+                            : _useCurrentLocationForRequest,
+                        icon: _locating
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Icon(Icons.my_location),
+                        label: const Text('Current location'),
+                      ),
+                      OutlinedButton.icon(
+                        onPressed: _chooseOnMap,
+                        icon: const Icon(Icons.map_outlined),
+                        label: const Text('Choose on map'),
+                      ),
+                      if (_requestLatitude != null)
+                        OutlinedButton.icon(
+                          onPressed: _clearRequestLocation,
+                          icon: const Icon(Icons.close),
+                          label: const Text('Clear'),
+                        ),
+                    ],
+                  ),
+                  if (_requestAreaLabel != null) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      'Selected: $_requestAreaLabel',
+                      style: const TextStyle(color: AppColors.inkSecondary),
+                    ),
+                  ],
                   const SizedBox(height: 12),
                   SegmentedButton<String>(
                     segments: [

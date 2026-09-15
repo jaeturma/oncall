@@ -6,24 +6,33 @@ class ProviderProfileInput {
   ProviderProfileInput({
     required this.provinceId,
     required this.municipalityId,
+    this.barangayId,
     this.bio,
     this.serviceRadiusKm,
+    this.latitude,
+    this.longitude,
     required this.serviceIds,
     this.credentials = const [],
   });
 
   final int provinceId;
   final int municipalityId;
+  final int? barangayId;
   final String? bio;
   final int? serviceRadiusKm;
+  final double? latitude;
+  final double? longitude;
   final List<int> serviceIds;
   final List<String> credentials;
 
   Map<String, dynamic> toJson() => {
     'province_id': provinceId,
     'municipality_id': municipalityId,
+    if (barangayId != null) 'barangay_id': barangayId,
     if (bio != null) 'bio': bio,
     if (serviceRadiusKm != null) 'service_radius_km': serviceRadiusKm,
+    if (latitude != null) 'latitude': latitude,
+    if (longitude != null) 'longitude': longitude,
     'service_ids': serviceIds,
     'credentials_metadata': credentials,
   };

@@ -16,6 +16,8 @@
         ['label' => 'Catalog', 'route' => 'admin.catalog', 'match' => 'admin.catalog'],
         ['label' => 'SMS settings', 'route' => 'admin.settings.sms.edit', 'match' => 'admin.settings.sms.*'],
         ['label' => 'SMS logs', 'route' => 'admin.sms-logs.index', 'match' => 'admin.sms-logs.*'],
+        ['label' => 'Location settings', 'route' => 'admin.settings.location.edit', 'match' => 'admin.settings.location.*'],
+        ['label' => 'Location diagnostics', 'route' => 'admin.location-diagnostics.index', 'match' => 'admin.location-diagnostics.*'],
         ['label' => 'Audit log', 'route' => 'admin.audit-logs.index', 'match' => 'admin.audit-logs.*'],
     ];
 @endphp

@@ -1,8 +1,10 @@
 @php
     $selectedProvince = (int) old('province_id', $profile?->province_id ?? 0);
     $selectedMunicipality = (int) old('municipality_id', $profile?->municipality_id ?? 0);
+    $selectedBarangay = (int) old('barangay_id', $profile?->barangay_id ?? 0);
     $provinces = $municipalities->pluck('province')->unique('id')->sortBy('name');
     $visibleMunicipalities = $selectedProvince ? $municipalities->where('province_id', $selectedProvince) : $municipalities;
+    $visibleBarangays = $selectedMunicipality ? $barangays->where('municipality_id', $selectedMunicipality) : collect();
     $selectedServices = old('service_ids', $profile?->providerServices->pluck('service_id')->all() ?? []);
 @endphp
 
@@ -22,7 +24,15 @@
                         @foreach($visibleMunicipalities as $municipality)<option value="{{ $municipality->id }}" @selected($selectedMunicipality === $municipality->id)>{{ $municipality->name }}@unless($selectedProvince), {{ $municipality->province->name }}@endunless</option>@endforeach
                     </x-form.select>
                 </div>
-                <x-form.input name="service_radius_km" type="number" label="How far will you travel? (km)" min="1" max="500" inputmode="numeric" :value="$profile?->service_radius_km" optional hint="Shown on your profile as 'up to N km'." class="sm:max-w-xs" />
+                <div class="grid gap-5 sm:grid-cols-2">
+                    <x-form.select name="barangay_id" label="Barangay" placeholder="Select barangay (optional)" optional data-barangays-for="municipality_id" data-barangays-url="{{ route('locations.barangays', ['municipality' => 'MUNICIPALITY']) }}">
+                        @foreach($visibleBarangays as $barangay)<option value="{{ $barangay->id }}" @selected($selectedBarangay === $barangay->id)>{{ $barangay->name }}</option>@endforeach
+                    </x-form.select>
+                    <x-form.select name="service_radius_km" label="How far will you travel? (km)" optional hint="Shown on your profile as 'up to N km'.">
+                        <option value="">No fixed limit</option>
+                        @foreach($radiusChoices as $choice)<option value="{{ $choice }}" @selected((int) old('service_radius_km', $profile?->service_radius_km ?? 0) === $choice)>{{ $choice }} km</option>@endforeach
+                    </x-form.select>
+                </div>
             </section>
 
             <section class="grid gap-5 border-t border-line pt-8">

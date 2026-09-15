@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\LocationSource;
 use App\Enums\ServiceUrgency;
 use App\Models\Service;
 use App\Models\ServiceRequest;
@@ -32,6 +33,13 @@ class StoreServiceRequestRequest extends FormRequest
             'service_id' => ['required', 'integer', Rule::exists('services', 'id')->where('active', true)],
             'province_id' => ['required', 'integer', 'exists:provinces,id'],
             'municipality_id' => ['nullable', 'integer', Rule::exists('municipalities', 'id')->where('province_id', $this->integer('province_id'))],
+            'barangay_id' => ['nullable', 'integer', Rule::exists('barangays', 'id')->where('municipality_id', $this->integer('municipality_id'))],
+            // The exact job location — a one-time snapshot of this request,
+            // never a write to the customer's profile/address (Phase O §18).
+            'latitude' => ['nullable', 'numeric', 'between:-90,90', 'required_with:longitude'],
+            'longitude' => ['nullable', 'numeric', 'between:-180,180', 'required_with:latitude'],
+            'address_line' => ['nullable', 'string', 'max:255', new NoDirectContact],
+            'location_source' => ['nullable', Rule::enum(LocationSource::class)],
             'title' => ['required', 'string', 'max:160', new NoDirectContact],
             'description' => ['nullable', 'string', 'max:3000', new NoDirectContact],
             'urgency' => ['required', Rule::enum(ServiceUrgency::class)],

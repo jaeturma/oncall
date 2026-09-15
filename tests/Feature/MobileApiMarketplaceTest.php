@@ -78,6 +78,79 @@ class MobileApiMarketplaceTest extends TestCase
         $this->assertDatabaseHas('jobs', ['service_request_id' => $serviceRequestId, 'status' => JobStatus::Accepted->value]);
     }
 
+    public function test_exact_service_location_is_hidden_before_acceptance_and_revealed_only_to_participants_after(): void
+    {
+        $finder = $this->verifiedUser();
+        [$profile, $service] = $this->requestableProvider();
+        Sanctum::actingAs($finder);
+
+        $createResponse = $this->postJson("/api/v1/providers/{$profile->id}/service-requests", [
+            'service_id' => $service->id,
+            'province_id' => $profile->province_id,
+            'municipality_id' => $profile->municipality_id,
+            'latitude' => 7.123456,
+            'longitude' => 125.654321,
+            'address_line' => 'Near the blue gate',
+            'title' => 'Repair the kitchen sink',
+            'description' => 'The faucet leaks when it is opened.',
+            'urgency' => 'SAME_DAY',
+            'budget_min' => 500,
+            'budget_max' => 1000,
+            'safety_acknowledged' => '1',
+        ]);
+
+        $createResponse->assertCreated();
+        $serviceRequestId = $createResponse->json('data.id');
+        // Exact coordinates are captured on the row (a snapshot)...
+        $this->assertDatabaseHas('service_requests', ['id' => $serviceRequestId, 'latitude' => 7.123456, 'longitude' => 125.654321]);
+        // ...but never serialized before a Job exists — approximate area only.
+        $this->assertArrayNotHasKey('latitude', $createResponse->json('data'));
+        $this->assertArrayNotHasKey('longitude', $createResponse->json('data'));
+        $this->assertArrayNotHasKey('address_line', $createResponse->json('data'));
+
+        Sanctum::actingAs($profile->user);
+        $showBeforeAccept = $this->getJson("/api/v1/service-requests/{$serviceRequestId}");
+        $showBeforeAccept->assertOk();
+        $this->assertArrayNotHasKey('latitude', $showBeforeAccept->json('data'));
+
+        $acceptResponse = $this->patchJson("/api/v1/service-requests/{$serviceRequestId}/accept", ['agreed_price' => 800]);
+        $jobId = $acceptResponse->json('data.id');
+
+        // The assigned provider now sees the exact location...
+        $providerView = $this->getJson("/api/v1/jobs/{$jobId}");
+        $providerView->assertOk()
+            ->assertJsonPath('data.latitude', 7.123456)
+            ->assertJsonPath('data.longitude', 125.654321)
+            ->assertJsonPath('data.address_line', 'Near the blue gate');
+
+        // ...as does the service finder who owns the request...
+        Sanctum::actingAs($finder);
+        $this->getJson("/api/v1/jobs/{$jobId}")->assertOk()->assertJsonPath('data.latitude', 7.123456);
+
+        // ...but a third party never does, even if somehow authorized to view basic job data elsewhere.
+        $thirdParty = User::factory()->serviceProvider()->create(['status' => UserStatus::Active]);
+        Sanctum::actingAs($thirdParty);
+        $this->getJson("/api/v1/jobs/{$jobId}")->assertForbidden();
+    }
+
+    public function test_malformed_service_request_coordinates_are_rejected(): void
+    {
+        $finder = $this->verifiedUser();
+        [$profile, $service] = $this->requestableProvider();
+        Sanctum::actingAs($finder);
+
+        $this->postJson("/api/v1/providers/{$profile->id}/service-requests", [
+            'service_id' => $service->id,
+            'province_id' => $profile->province_id,
+            'municipality_id' => $profile->municipality_id,
+            'latitude' => 200,
+            'longitude' => 125.0,
+            'title' => 'Repair the kitchen sink',
+            'urgency' => 'SAME_DAY',
+            'safety_acknowledged' => '1',
+        ])->assertUnprocessable()->assertJsonValidationErrors('latitude');
+    }
+
     public function test_another_provider_cannot_view_or_accept_someone_elses_service_request(): void
     {
         $finder = $this->verifiedUser();

@@ -15,6 +15,7 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator as LengthAwarePaginator
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection;
 
 class ProviderSearchService
 {
@@ -29,10 +30,11 @@ class ProviderSearchService
         [$originLatitude, $originLongitude] = $this->originCoordinates($filters);
 
         $profiles = ProviderProfile::query()
-            ->select(['id', 'user_id', 'province_id', 'municipality_id', 'available_now', 'availability_status', 'verification_status', 'rating_cached', 'completed_jobs_cached'])
+            ->select(['id', 'user_id', 'province_id', 'municipality_id', 'barangay_id', 'available_now', 'availability_status', 'verification_status', 'rating_cached', 'completed_jobs_cached', 'latitude', 'longitude', 'service_radius_km'])
             ->with([
                 'province:id,name',
                 'municipality:id,province_id,name,latitude,longitude',
+                'barangay:id,municipality_id,name,latitude,longitude',
                 'providerServices' => fn ($query) => $query->select(['id', 'provider_profile_id', 'service_id'])->where('active', true)->with('service:id,name'),
             ])
             ->when($canRevealIdentity, fn (Builder $query) => $query->with('user:id,name'))
@@ -67,13 +69,33 @@ class ProviderSearchService
                 $profile->verified_document_types = $verifiedTypes->get($profile->user_id, []);
                 $profile->mobile_verified = $contactVerification->get($profile->user_id)['mobile'] ?? false;
                 $profile->email_verified = $contactVerification->get($profile->user_id)['email'] ?? false;
-                $profile->distance_km = $this->distanceEstimator->kilometersBetween(
-                    $originLatitude,
-                    $originLongitude,
-                    $profile->municipality->latitude !== null ? (float) $profile->municipality->latitude : null,
-                    $profile->municipality->longitude !== null ? (float) $profile->municipality->longitude : null,
-                );
+
+                // Prefer the provider's own base coordinates when they've set
+                // them (more accurate); fall back to the municipality
+                // centroid, same as before this was ever collected.
+                [$targetLatitude, $targetLongitude] = $profile->hasOwnCoordinates()
+                    ? [(float) $profile->latitude, (float) $profile->longitude]
+                    : [
+                        $profile->municipality->latitude !== null ? (float) $profile->municipality->latitude : null,
+                        $profile->municipality->longitude !== null ? (float) $profile->municipality->longitude : null,
+                    ];
+
+                $profile->distance_km = $this->distanceEstimator->kilometersBetween($originLatitude, $originLongitude, $targetLatitude, $targetLongitude);
+
+                // Sanitized marker for map display (Phase O §16): a barangay
+                // or municipality centroid only — never the provider's own
+                // stored latitude/longitude, which stays server-side for
+                // matching but is never serialized publicly.
+                $markerSource = $profile->barangay ?? $profile->municipality;
+                $profile->area_marker = $markerSource?->latitude !== null && $markerSource?->longitude !== null
+                    ? ['latitude' => (float) $markerSource->latitude, 'longitude' => (float) $markerSource->longitude]
+                    : null;
             })
+            ->when(isset($filters['radius_km']), fn (Collection $profiles) => $profiles->filter(
+                fn (ProviderProfile $profile) => $profile->distance_km !== null
+                    && $profile->distance_km <= $filters['radius_km']
+                    && ($profile->service_radius_km === null || $profile->distance_km <= $profile->service_radius_km)
+            ))
             ->sortBy($this->sortComparators($filters['sort'] ?? null))
             ->values();
 
@@ -118,6 +140,13 @@ class ProviderSearchService
      */
     private function originCoordinates(array $filters): array
     {
+        // An explicit search origin (current GPS location or a map pin) always
+        // wins over the municipality/province centroid fallback — Laravel
+        // still computes the actual distance server-side either way.
+        if (isset($filters['latitude'], $filters['longitude'])) {
+            return [(float) $filters['latitude'], (float) $filters['longitude']];
+        }
+
         if (isset($filters['municipality_id'])) {
             $municipality = Municipality::query()->find($filters['municipality_id'], ['latitude', 'longitude']);
 

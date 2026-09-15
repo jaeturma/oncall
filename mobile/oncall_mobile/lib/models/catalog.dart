@@ -66,3 +66,13 @@ class Municipality {
   final String name;
   final String type;
 }
+
+class Barangay {
+  Barangay({required this.id, required this.name});
+
+  factory Barangay.fromJson(Map<String, dynamic> json) =>
+      Barangay(id: json['id'] as int, name: json['name'] as String);
+
+  final int id;
+  final String name;
+}

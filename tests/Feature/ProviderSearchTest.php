@@ -221,6 +221,58 @@ class ProviderSearchTest extends TestCase
         $response->assertRedirect(route('home'))->assertSessionHasErrors('municipality_id');
     }
 
+    public function test_radius_filter_excludes_providers_outside_the_search_radius(): void
+    {
+        $province = Province::factory()->create(['latitude' => 10.0, 'longitude' => 123.0]);
+        $municipality = Municipality::factory()->for($province)->create(['latitude' => 10.0, 'longitude' => 123.0]);
+        $service = Service::factory()->create();
+        $nearProvider = User::factory()->serviceProvider()->create(['name' => 'Near Provider']);
+        $farProvider = User::factory()->serviceProvider()->create(['name' => 'Far Provider']);
+        // Roughly 1km from the search origin.
+        $this->searchableProfile($nearProvider, $province, $municipality, $service, ['latitude' => 10.009, 'longitude' => 123.0, 'service_radius_km' => 50]);
+        // Roughly 110km from the search origin — outside a 10km radius.
+        $this->searchableProfile($farProvider, $province, $municipality, $service, ['latitude' => 11.0, 'longitude' => 123.0, 'service_radius_km' => 50]);
+
+        $response = $this->get(route('providers.search', ['help' => 'service:'.$service->id, 'province_id' => $province->id, 'latitude' => 10.0, 'longitude' => 123.0, 'radius_km' => 10]));
+
+        $response->assertOk()->assertSee('1 provider found');
+    }
+
+    public function test_radius_filter_respects_the_providers_own_configured_service_radius(): void
+    {
+        $province = Province::factory()->create(['latitude' => 10.0, 'longitude' => 123.0]);
+        $municipality = Municipality::factory()->for($province)->create(['latitude' => 10.0, 'longitude' => 123.0]);
+        $service = Service::factory()->create();
+        $shortRadiusProvider = User::factory()->serviceProvider()->create();
+        // ~11km from the search origin: within the search radius (25km) but
+        // outside this provider's own 5km service radius.
+        $this->searchableProfile($shortRadiusProvider, $province, $municipality, $service, ['latitude' => 10.1, 'longitude' => 123.0, 'service_radius_km' => 5]);
+
+        $response = $this->get(route('providers.search', ['help' => 'service:'.$service->id, 'province_id' => $province->id, 'latitude' => 10.0, 'longitude' => 123.0, 'radius_km' => 25]));
+
+        $response->assertOk()->assertSee('0 providers found');
+    }
+
+    public function test_out_of_range_radius_is_rejected(): void
+    {
+        $province = Province::factory()->create();
+        $service = Service::factory()->create();
+
+        $response = $this->from(route('home'))->get(route('providers.search', ['help' => 'service:'.$service->id, 'province_id' => $province->id, 'radius_km' => 999]));
+
+        $response->assertRedirect(route('home'))->assertSessionHasErrors('radius_km');
+    }
+
+    public function test_malformed_search_coordinates_are_rejected(): void
+    {
+        $province = Province::factory()->create();
+        $service = Service::factory()->create();
+
+        $response = $this->from(route('home'))->get(route('providers.search', ['help' => 'service:'.$service->id, 'province_id' => $province->id, 'latitude' => 200, 'longitude' => 123.0]));
+
+        $response->assertRedirect(route('home'))->assertSessionHasErrors('latitude');
+    }
+
     private function searchableProfile(User $provider, Province $province, Municipality $municipality, Service $service, array $attributes = [], ?DateTimeInterface $expiresAt = null): ProviderProfile
     {
         $provider->update(['identity_verification_status' => VerificationStatus::Verified]);

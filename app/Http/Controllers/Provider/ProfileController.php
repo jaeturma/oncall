@@ -3,11 +3,15 @@
 namespace App\Http\Controllers\Provider;
 
 use App\Enums\JobStatus;
+use App\Enums\LocationSource;
 use App\Enums\ServiceRequestStatus;
 use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreProviderProfileRequest;
 use App\Http\Requests\UpdateProviderProfileRequest;
+use App\Models\AuditLog;
+use App\Models\Barangay;
+use App\Models\LocationSetting;
 use App\Models\Municipality;
 use App\Models\ProviderProfile;
 use App\Models\Service;
@@ -55,6 +59,7 @@ class ProfileController extends Controller
         DB::transaction(function () use ($request, $data) {
             $profile = $request->user()->providerProfile()->create($this->profileAttributes($data));
             $this->replaceServices($profile, $data['service_ids']);
+            $this->auditLocationIfChanged($request, $profile, before: null);
         });
 
         return redirect()->route('provider.dashboard')->with('status', 'Provider profile created.');
@@ -68,9 +73,11 @@ class ProfileController extends Controller
     public function update(UpdateProviderProfileRequest $request, ProviderProfile $providerProfile): RedirectResponse
     {
         $data = $request->validated();
-        DB::transaction(function () use ($providerProfile, $data) {
+        DB::transaction(function () use ($request, $providerProfile, $data) {
+            $before = Arr::only($providerProfile->getOriginal(), ['barangay_id', 'latitude', 'longitude']);
             $providerProfile->update($this->profileAttributes($data));
             $this->replaceServices($providerProfile, $data['service_ids']);
+            $this->auditLocationIfChanged($request, $providerProfile, $before);
         });
 
         return redirect()->route('provider.dashboard')->with('status', 'Provider profile updated.');
@@ -91,7 +98,13 @@ class ProfileController extends Controller
 
     private function formData(?ProviderProfile $profile = null): array
     {
-        return ['profile' => $profile, 'services' => Service::where('active', true)->orderBy('name')->get(), 'municipalities' => Municipality::with('province')->orderBy('name')->get()];
+        return [
+            'profile' => $profile,
+            'services' => Service::where('active', true)->orderBy('name')->get(),
+            'municipalities' => Municipality::with('province')->orderBy('name')->get(),
+            'barangays' => Barangay::orderBy('name')->get(),
+            'radiusChoices' => LocationSetting::current()->radiusChoices(),
+        ];
     }
 
     private function replaceServices(ProviderProfile $profile, array $serviceIds): void
@@ -106,6 +119,34 @@ class ProfileController extends Controller
         $credentials = array_values(array_filter($attributes['credentials_metadata'] ?? [], fn (?string $credential): bool => filled($credential)));
         $attributes['credentials_metadata'] = $credentials === [] ? null : $credentials;
 
+        if (array_key_exists('latitude', $attributes) && $attributes['latitude'] !== null) {
+            $attributes['location_source'] = LocationSource::Manual;
+            $attributes['location_updated_at'] = now();
+        }
+
         return $attributes;
+    }
+
+    /**
+     * @param  array<string, mixed>|null  $before
+     */
+    private function auditLocationIfChanged(Request $request, ProviderProfile $profile, ?array $before): void
+    {
+        $after = Arr::only($profile->getAttributes(), ['barangay_id', 'latitude', 'longitude']);
+
+        if ($before === $after) {
+            return;
+        }
+
+        AuditLog::create([
+            'actor_id' => $request->user()->id,
+            'event' => 'provider_location.updated',
+            'subject_type' => ProviderProfile::class,
+            'subject_id' => $profile->id,
+            'before_json' => $before,
+            'after_json' => $after,
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+        ]);
     }
 }

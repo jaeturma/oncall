@@ -33,3 +33,21 @@ class IdName {
   final int id;
   final String name;
 }
+
+/// A `{latitude, longitude}` pair embedded in a resource (e.g. a provider's
+/// sanitized `area_marker`). Never assume this is the subject's exact
+/// coordinates — see each field's own privacy docs for what it actually is.
+class GeoPoint {
+  GeoPoint({required this.latitude, required this.longitude});
+
+  factory GeoPoint.fromJson(Map<String, dynamic> json) => GeoPoint(
+    latitude: parseNum(json['latitude']) ?? 0,
+    longitude: parseNum(json['longitude']) ?? 0,
+  );
+
+  static GeoPoint? fromJsonOrNull(dynamic json) =>
+      json == null ? null : GeoPoint.fromJson(json as Map<String, dynamic>);
+
+  final double latitude;
+  final double longitude;
+}

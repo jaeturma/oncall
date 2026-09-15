@@ -1,4 +1,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Phase O: foreground location only, for "use my current location" in
+         search, provider base-location setup, and service-request location.
+         No ACCESS_BACKGROUND_LOCATION — this app does not track in the
+         background (see docs/architecture/LOCATION_MAPS_ARCHITECTURE.md). -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
     <application
         android:label="oncall_mobile"
         android:name="${applicationName}"

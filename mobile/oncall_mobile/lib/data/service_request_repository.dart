@@ -24,6 +24,13 @@ class ServiceRequestRepository {
     required int serviceId,
     required int provinceId,
     int? municipalityId,
+    int? barangayId,
+    double? latitude,
+    double? longitude,
+    String? addressLine,
+    // 'GPS' | 'MAP_PIN' | 'MANUAL' — matches App\Enums\LocationSource.
+    // Only meaningful when latitude/longitude are also set.
+    String? locationSource,
     required String title,
     String? description,
     required String urgency,
@@ -37,6 +44,12 @@ class ServiceRequestRepository {
         'service_id': serviceId,
         'province_id': provinceId,
         if (municipalityId != null) 'municipality_id': municipalityId,
+        if (barangayId != null) 'barangay_id': barangayId,
+        if (latitude != null) 'latitude': latitude,
+        if (longitude != null) 'longitude': longitude,
+        if (addressLine != null && addressLine.isNotEmpty)
+          'address_line': addressLine,
+        if (locationSource != null) 'location_source': locationSource,
         'title': title,
         if (description != null && description.isNotEmpty)
           'description': description,

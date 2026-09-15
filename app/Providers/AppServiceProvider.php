@@ -92,6 +92,14 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('manage-notification-templates', fn (User $user): bool => $user->canAccessAdmin());
         Gate::define('view-notification-logs', fn (User $user): bool => $user->canAccessAdmin());
 
+        // Phase O: location/map administration. Same Admin-only collapse —
+        // marketplace roles (ServiceFinder/ServiceProvider) never pass
+        // canAccessAdmin(), so they can never reach these regardless of the
+        // named-gate count.
+        Gate::define('manage-location-settings', fn (User $user): bool => $user->canAccessAdmin());
+        Gate::define('manage-map-settings', fn (User $user): bool => $user->canAccessAdmin());
+        Gate::define('view-location-diagnostics', fn (User $user): bool => $user->canAccessAdmin());
+
         // Laravel's slim skeleton has no EventServiceProvider to auto-wire
         // this, so it's registered explicitly: User implements
         // MustVerifyEmail, and this sends the verification email whenever a

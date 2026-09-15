@@ -13,6 +13,7 @@ import 'screens/shared/conversation_screen.dart';
 import 'screens/shared/enforcement_case_screen.dart';
 import 'screens/shared/enforcement_cases_list_screen.dart';
 import 'screens/shared/job_detail_screen.dart';
+import 'screens/shared/location_picker_screen.dart';
 import 'screens/shared/notifications_screen.dart';
 import 'screens/shared/report_user_screen.dart';
 import 'screens/shared/service_request_detail_screen.dart';
@@ -154,6 +155,17 @@ GoRouter buildRouter(AuthState authState) {
       GoRoute(
         path: '/provider-profile/edit',
         builder: (context, state) => const ProviderProfileEditScreen(),
+      ),
+      GoRoute(
+        path: '/location-picker',
+        builder: (context, state) {
+          final extra = state.extra as Map<String, double>?;
+
+          return LocationPickerScreen(
+            initialLatitude: extra?['latitude'],
+            initialLongitude: extra?['longitude'],
+          );
+        },
       ),
     ],
   );

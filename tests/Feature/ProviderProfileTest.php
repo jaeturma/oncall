@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Enums\AvailabilityStatus;
+use App\Models\Barangay;
 use App\Models\Municipality;
 use App\Models\ProviderProfile;
 use App\Models\Province;
@@ -21,7 +22,7 @@ class ProviderProfileTest extends TestCase
         $province = Province::factory()->create();
         $municipality = Municipality::factory()->for($province)->create();
         $service = Service::factory()->create();
-        $response = $this->actingAs($provider)->post(route('provider.profiles.store'), ['province_id' => $province->id, 'municipality_id' => $municipality->id, 'bio' => 'Licensed technician', 'service_radius_km' => 30, 'credentials_metadata' => ['TESDA NC II'], 'service_ids' => [$service->id]]);
+        $response = $this->actingAs($provider)->post(route('provider.profiles.store'), ['province_id' => $province->id, 'municipality_id' => $municipality->id, 'bio' => 'Licensed technician', 'service_radius_km' => 25, 'credentials_metadata' => ['TESDA NC II'], 'service_ids' => [$service->id]]);
         $response->assertRedirect(route('provider.dashboard'));
         $this->assertDatabaseHas('provider_profiles', ['user_id' => $provider->id, 'municipality_id' => $municipality->id, 'bio' => 'Licensed technician']);
         $profile = ProviderProfile::whereBelongsTo($provider)->firstOrFail();
@@ -123,5 +124,80 @@ class ProviderProfileTest extends TestCase
         $profile->providerServices()->create(['service_id' => $service->id]);
         $response = $this->actingAs($profile->user)->get(route('provider.dashboard'));
         $response->assertOk()->assertDontSee('<script>alert(1)</script>', false);
+    }
+
+    public function test_provider_sets_own_base_coordinates_and_barangay(): void
+    {
+        $provider = User::factory()->serviceProvider()->create();
+        $province = Province::factory()->create();
+        $municipality = Municipality::factory()->for($province)->create();
+        $barangay = Barangay::factory()->for($municipality)->create();
+        $service = Service::factory()->create();
+
+        $this->actingAs($provider)->post(route('provider.profiles.store'), [
+            'province_id' => $province->id,
+            'municipality_id' => $municipality->id,
+            'barangay_id' => $barangay->id,
+            'latitude' => 7.123456,
+            'longitude' => 125.654321,
+            'service_ids' => [$service->id],
+        ])->assertRedirect(route('provider.dashboard'));
+
+        $profile = ProviderProfile::whereBelongsTo($provider)->firstOrFail();
+        $this->assertSame($barangay->id, $profile->barangay_id);
+        $this->assertEqualsWithDelta(7.123456, (float) $profile->latitude, 0.00001);
+        $this->assertEqualsWithDelta(125.654321, (float) $profile->longitude, 0.00001);
+        $this->assertSame('MANUAL', $profile->location_source->value);
+        $this->assertNotNull($profile->location_updated_at);
+        $this->assertDatabaseHas('audit_logs', ['event' => 'provider_location.updated', 'subject_id' => $profile->id]);
+    }
+
+    public function test_malformed_provider_coordinates_are_rejected(): void
+    {
+        $provider = User::factory()->serviceProvider()->create();
+        $province = Province::factory()->create();
+        $municipality = Municipality::factory()->for($province)->create();
+        $service = Service::factory()->create();
+
+        $this->actingAs($provider)->post(route('provider.profiles.store'), [
+            'province_id' => $province->id,
+            'municipality_id' => $municipality->id,
+            'latitude' => 999,
+            'longitude' => 125.0,
+            'service_ids' => [$service->id],
+        ])->assertSessionHasErrors('latitude');
+
+        $this->assertDatabaseMissing('provider_profiles', ['user_id' => $provider->id]);
+    }
+
+    public function test_service_radius_outside_admin_allowed_choices_is_rejected(): void
+    {
+        $provider = User::factory()->serviceProvider()->create();
+        $province = Province::factory()->create();
+        $municipality = Municipality::factory()->for($province)->create();
+        $service = Service::factory()->create();
+
+        $this->actingAs($provider)->post(route('provider.profiles.store'), [
+            'province_id' => $province->id,
+            'municipality_id' => $municipality->id,
+            'service_radius_km' => 17,
+            'service_ids' => [$service->id],
+        ])->assertSessionHasErrors('service_radius_km');
+    }
+
+    public function test_another_provider_cannot_alter_someone_elses_base_location(): void
+    {
+        $profile = ProviderProfile::factory()->create(['latitude' => 7.0, 'longitude' => 125.0]);
+        $otherProvider = User::factory()->serviceProvider()->create();
+
+        $this->actingAs($otherProvider)->put(route('provider.profiles.update', $profile), [
+            'province_id' => $profile->province_id,
+            'municipality_id' => $profile->municipality_id,
+            'latitude' => 1.0,
+            'longitude' => 1.0,
+            'service_ids' => [Service::factory()->create()->id],
+        ])->assertForbidden();
+
+        $this->assertDatabaseHas('provider_profiles', ['id' => $profile->id, 'latitude' => 7.0, 'longitude' => 125.0]);
     }
 }

@@ -78,8 +78,13 @@ Route::name('api.')->group(function () {
         Route::get('/catalog', [CatalogController::class, 'index'])->name('catalog');
         Route::get('/provinces', [LocationController::class, 'index'])->name('provinces.index');
         Route::get('/provinces/{province}/municipalities', [LocationController::class, 'municipalities'])->name('provinces.municipalities');
+        Route::get('/locations/municipalities/{municipality}/barangays', [LocationController::class, 'barangays'])->name('locations.barangays');
+        // Anti-scraping (Phase O §26): reverse-geocoding is a natural
+        // triangulation/coordinate-scan target, so it gets its own tighter
+        // throttle rather than sharing the general per-minute API limiter.
+        Route::get('/locations/reverse-geocode', [LocationController::class, 'reverseGeocode'])->middleware('throttle:20,1')->name('locations.reverse-geocode');
 
-        Route::get('/providers/search', ProviderSearchController::class)->name('providers.search');
+        Route::get('/providers/search', ProviderSearchController::class)->middleware('throttle:30,1')->name('providers.search');
         Route::get('/providers/{provider_profile}', [ProviderController::class, 'show'])->name('providers.show');
 
         Route::get('/service-requests', [ServiceRequestController::class, 'index'])->name('service-requests.index');

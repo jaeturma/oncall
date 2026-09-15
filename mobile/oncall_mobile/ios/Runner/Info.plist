@@ -26,6 +26,11 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<!-- Phase O: When-In-Use only — used for "use my current location" in
+	     provider search, provider base-location setup, and service-request
+	     location. This app never requests Always/background location. -->
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Oncall uses your location to show nearby providers and to let you set an accurate service location. Your exact location is never shared publicly.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

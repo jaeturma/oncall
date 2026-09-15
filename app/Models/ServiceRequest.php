@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\LocationSource;
 use App\Enums\ServiceRequestStatus;
 use App\Enums\ServiceUrgency;
 use App\Policies\ServiceRequestPolicy;
@@ -13,7 +14,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
-#[Fillable(['service_finder_id', 'requested_provider_id', 'service_id', 'province_id', 'municipality_id', 'title', 'description', 'urgency', 'needed_at', 'budget_min', 'budget_max', 'status', 'safety_acknowledged_at'])]
+#[Fillable(['service_finder_id', 'requested_provider_id', 'service_id', 'province_id', 'municipality_id', 'barangay_id', 'title', 'description', 'urgency', 'needed_at', 'budget_min', 'budget_max', 'status', 'safety_acknowledged_at', 'latitude', 'longitude', 'address_line', 'location_source', 'location_captured_at'])]
 #[UsePolicy(ServiceRequestPolicy::class)]
 class ServiceRequest extends Model
 {
@@ -22,7 +23,18 @@ class ServiceRequest extends Model
 
     protected function casts(): array
     {
-        return ['urgency' => ServiceUrgency::class, 'needed_at' => 'datetime', 'budget_min' => 'decimal:2', 'budget_max' => 'decimal:2', 'status' => ServiceRequestStatus::class, 'safety_acknowledged_at' => 'datetime'];
+        return [
+            'urgency' => ServiceUrgency::class,
+            'needed_at' => 'datetime',
+            'budget_min' => 'decimal:2',
+            'budget_max' => 'decimal:2',
+            'status' => ServiceRequestStatus::class,
+            'safety_acknowledged_at' => 'datetime',
+            'latitude' => 'decimal:6',
+            'longitude' => 'decimal:6',
+            'location_source' => LocationSource::class,
+            'location_captured_at' => 'datetime',
+        ];
     }
 
     public function serviceFinder(): BelongsTo
@@ -48,6 +60,20 @@ class ServiceRequest extends Model
     public function municipality(): BelongsTo
     {
         return $this->belongsTo(Municipality::class);
+    }
+
+    public function barangay(): BelongsTo
+    {
+        return $this->belongsTo(Barangay::class);
+    }
+
+    /**
+     * Whether an exact address/pin was captured for this request (as opposed
+     * to only ever having province/municipality granularity).
+     */
+    public function hasExactLocation(): bool
+    {
+        return $this->latitude !== null && $this->longitude !== null;
     }
 
     public function job(): HasOne

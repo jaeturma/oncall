@@ -340,57 +340,64 @@ function initStepper(form) {
 document.querySelectorAll('form[data-stepper]').forEach(initStepper);
 
 /* ------------------------------------------------------------------ */
-/* Dependent municipality selects                                      */
+/* Dependent selects (municipality-for-province, barangay-for-city)    */
 /* ------------------------------------------------------------------ */
 
-function initDependentSelect(municipalitySelect) {
-    const provinceSelect = document.getElementById(municipalitySelect.dataset.municipalitiesFor);
-    const template = municipalitySelect.dataset.municipalitiesUrl; // .../locations/PROVINCE/municipalities
+function initDependentSelect(childSelect, { parentAttr, urlAttr, initialAttr, selectedAttr, placeholderText = null }) {
+    const parentSelect = document.getElementById(childSelect.dataset[parentAttr]);
+    const template = childSelect.dataset[urlAttr]; // .../locations/PARENT/children
 
-    if (!provinceSelect || !template) {
+    if (!parentSelect || !template) {
         return;
     }
 
-    const placeholder = municipalitySelect.querySelector('option[value=""]')?.textContent || 'Select';
+    const placeholder = placeholderText || childSelect.querySelector('option[value=""]')?.textContent || 'Select';
 
     const load = async (keepValue) => {
-        const provinceId = provinceSelect.value;
-        municipalitySelect.innerHTML = `<option value="">${placeholder}</option>`;
+        const parentId = parentSelect.value;
+        childSelect.innerHTML = `<option value="">${placeholder}</option>`;
 
-        if (!provinceId) {
-            municipalitySelect.disabled = true;
+        if (!parentId) {
+            childSelect.disabled = true;
 
             return;
         }
 
-        municipalitySelect.disabled = true;
+        childSelect.disabled = true;
 
         try {
-            const response = await fetch(template.replace('PROVINCE', provinceId), { headers: { Accept: 'application/json' } });
-            const municipalities = await response.json();
+            const response = await fetch(template.replace(/PROVINCE|MUNICIPALITY/, parentId), { headers: { Accept: 'application/json' } });
+            const payload = await response.json();
+            const children = Array.isArray(payload) ? payload : payload.data;
 
-            municipalities.forEach((municipality) => {
+            children.forEach((child) => {
                 const option = document.createElement('option');
-                option.value = municipality.id;
-                option.textContent = municipality.name;
-                option.selected = String(municipality.id) === String(keepValue);
-                municipalitySelect.append(option);
+                option.value = child.id;
+                option.textContent = child.name;
+                option.selected = String(child.id) === String(keepValue);
+                childSelect.append(option);
             });
         } catch {
             // Leave the placeholder in place; the server still validates.
         } finally {
-            municipalitySelect.disabled = false;
+            childSelect.disabled = false;
         }
     };
 
-    provinceSelect.addEventListener('change', () => load(null));
+    parentSelect.addEventListener('change', () => load(null));
 
-    if (municipalitySelect.dataset.municipalitiesInitial === 'load') {
-        load(municipalitySelect.dataset.selected || null);
+    if (childSelect.dataset[initialAttr] === 'load') {
+        load(childSelect.dataset[selectedAttr] || null);
     }
 }
 
-document.querySelectorAll('select[data-municipalities-for]').forEach(initDependentSelect);
+document.querySelectorAll('select[data-municipalities-for]').forEach((select) => initDependentSelect(select, {
+    parentAttr: 'municipalitiesFor', urlAttr: 'municipalitiesUrl', initialAttr: 'municipalitiesInitial', selectedAttr: 'selected',
+}));
+
+document.querySelectorAll('select[data-barangays-for]').forEach((select) => initDependentSelect(select, {
+    parentAttr: 'barangaysFor', urlAttr: 'barangaysUrl', initialAttr: 'barangaysInitial', selectedAttr: 'barangaysSelected', placeholderText: 'Select barangay (optional)',
+}));
 
 /* ------------------------------------------------------------------ */
 /* Category shortcuts on the landing page                              */

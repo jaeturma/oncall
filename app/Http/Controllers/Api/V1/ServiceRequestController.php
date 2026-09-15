@@ -19,7 +19,7 @@ class ServiceRequestController extends Controller
     {
         Gate::authorize('viewAny', ServiceRequest::class);
         $requests = ServiceRequest::query()
-            ->with(['service:id,name', 'province:id,name', 'municipality:id,name', 'serviceFinder:id,name', 'requestedProvider:id,name'])
+            ->with(['service:id,name', 'province:id,name', 'municipality:id,name', 'barangay:id,name', 'serviceFinder:id,name', 'requestedProvider:id,name'])
             ->when($request->user()->role === UserRole::ServiceFinder, fn ($query) => $query->whereBelongsTo($request->user(), 'serviceFinder'))
             ->when($request->user()->role === UserRole::ServiceProvider, fn ($query) => $query->whereBelongsTo($request->user(), 'requestedProvider'))
             ->latest()->paginate(15);
@@ -41,6 +41,6 @@ class ServiceRequestController extends Controller
     {
         Gate::authorize('view', $serviceRequest);
 
-        return new ServiceRequestResource($serviceRequest->load(['service', 'province', 'municipality', 'serviceFinder', 'requestedProvider', 'job']));
+        return new ServiceRequestResource($serviceRequest->load(['service', 'province', 'municipality', 'barangay', 'serviceFinder', 'requestedProvider', 'job']));
     }
 }

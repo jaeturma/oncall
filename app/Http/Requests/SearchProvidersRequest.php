@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Models\LocationSetting;
 use App\Models\Service;
 use App\Models\ServiceCategory;
 use Illuminate\Contracts\Validation\ValidationRule;
@@ -34,6 +35,12 @@ class SearchProvidersRequest extends FormRequest
             'available_only' => ['nullable', 'boolean'],
             'min_rating' => ['nullable', 'integer', 'min:1', 'max:5'],
             'sort' => ['nullable', 'string', 'in:recommended,rating,nearest'],
+            // Search origin (current GPS location or a chosen map pin) plus
+            // an admin-bounded search radius — both optional, and only ever
+            // narrow/re-center results within the required province.
+            'latitude' => ['nullable', 'numeric', 'between:-90,90', 'required_with:longitude'],
+            'longitude' => ['nullable', 'numeric', 'between:-180,180', 'required_with:latitude'],
+            'radius_km' => ['nullable', 'integer', Rule::in(LocationSetting::current()->radiusChoices())],
         ];
     }
 

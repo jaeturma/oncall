@@ -8,8 +8,10 @@ use Illuminate\Database\Seeder;
 class LocationSeeder extends Seeder
 {
     /**
-     * A minimal province/city set for the MVP. Barangay is intentionally
-     * out of scope for Phase 1; the full PSGC dataset can replace this later.
+     * A minimal province/city set for the MVP. Barangay coverage (Phase O) is
+     * a curated sample of real, well-known barangay names per municipality —
+     * not an exhaustive PSGC import (~42,000 barangays nationwide) — which
+     * can replace this later.
      *
      * Coordinates are approximate town/city-center points (not live GPS) used
      * only to estimate "how far away" a provider is. Good enough for demo
@@ -69,6 +71,44 @@ class LocationSeeder extends Seeder
         'Cebu' => ['lat' => 10.3157, 'lng' => 123.8854],
     ];
 
+    /**
+     * Real, well-known barangay names per municipality (Phase O). Not an
+     * exhaustive PSGC import — a representative sample so progressive
+     * Province → City → Barangay selection has real data to work with.
+     * Coordinates are not individually surveyed; each is offset a small,
+     * deterministic amount from the municipality centroid above so distance
+     * estimates stay in the right neighborhood without claiming precision
+     * the seed data doesn't have.
+     *
+     * @var array<string, list<string>>
+     */
+    private const BARANGAYS = [
+        'Tagum City' => ['Apokon', 'Bincungan', 'Canocotan', 'Magugpo Poblacion', 'Mankilam', 'Pandapan', 'Visayan Village'],
+        'Panabo City' => ['A.O. Floirendo', 'Cagangohan', 'Gredu (Poblacion)', 'Kasilak', 'Little Panay', 'San Vicente', 'Santo Niño'],
+        'Island Garden City of Samal' => ['Anonang', 'Babak (Poblacion)', 'Caliclic', 'Cogon', 'Kaputian (Poblacion)', 'Peñaplata (Poblacion)', 'San Remigio'],
+        'Santo Tomas' => ['Kimamon', 'Magdum', 'New Katipunan', 'Poblacion', 'San Miguel', 'Tibal-og'],
+        'Carmen' => ['Anibongan', 'Katipunan', 'Poblacion', 'Sto. Niño', 'Tuganay'],
+        'Kapalong' => ['Florida', 'Gabuyan', 'Mabantao', 'Poblacion', 'Sua-on'],
+        'Asuncion' => ['Ganday', 'Kapalong', 'Naboc', 'New Del Monte', 'Poblacion'],
+        'Davao City' => ['Agdao', 'Bucana', 'Buhangin', 'Bunawan', 'Matina', 'Poblacion', 'Talomo', 'Toril'],
+        'Digos City' => ['Aplaya', 'Dawis', 'Goma', 'Mahayahay', 'Poblacion', 'Zone I (Poblacion)'],
+        'Bansalan' => ['Anonang', 'Managa', 'Poblacion', 'Rizal', 'San Roque'],
+        'Santa Cruz' => ['Astorga', 'Coronon', 'Darapuay', 'Inawayan', 'Poblacion'],
+        'Sulop' => ['Balasinon', 'Kiblagon', 'Poblacion', 'Tagolilong'],
+        'Nabunturan' => ['Anislagan', 'Magading', 'Poblacion', 'San Isidro', 'Tagbaros'],
+        'Monkayo' => ['Awao', 'Poblacion', 'Tubo-tubo', 'Union'],
+        'Mabini' => ['Golden Valley', 'Poblacion', 'San Vicente', 'Tagnanan'],
+        'Quezon City' => ['Bagong Pag-asa', 'Batasan Hills', 'Commonwealth', 'Diliman', 'Fairview', 'Novaliches Proper', 'Project 6'],
+        'Manila' => ['Binondo', 'Ermita', 'Intramuros', 'Malate', 'Paco', 'Sampaloc', 'Tondo'],
+        'Makati' => ['Bel-Air', 'Bangkal', 'Guadalupe Nuevo', 'Poblacion', 'San Lorenzo', 'Urdaneta'],
+        'Pasig' => ['Kapitolyo', 'Manggahan', 'Maybunga', 'Ortigas Center', 'Pinagbuhatan', 'San Antonio'],
+        'Taguig' => ['Bagumbayan', 'Bambang', 'Fort Bonifacio', 'Hagonoy', 'Ususan', 'Western Bicutan'],
+        'Cebu City' => ['Apas', 'Banilad', 'Capitol Site', 'Guadalupe', 'Lahug', 'Mabolo', 'Talamban'],
+        'Mandaue City' => ['Bakilid', 'Banilad', 'Centro (Poblacion)', 'Subangdaku', 'Tipolo'],
+        'Lapu-Lapu City' => ['Agus', 'Babag', 'Gun-ob', 'Pajo', 'Poblacion'],
+        'Talisay City' => ['Biasong', 'Dumlog', 'Lawaan I', 'Poblacion', 'Tabunok'],
+    ];
+
     public function run(): void
     {
         foreach (self::LOCATIONS as $provinceName => $municipalities) {
@@ -77,10 +117,23 @@ class LocationSeeder extends Seeder
             $province->fill(['latitude' => $center['lat'], 'longitude' => $center['lng']])->save();
 
             foreach ($municipalities as $municipalityName => $attributes) {
-                $province->municipalities()->updateOrCreate(
+                $municipality = $province->municipalities()->updateOrCreate(
                     ['name' => $municipalityName],
                     ['type' => $attributes['type'], 'latitude' => $attributes['lat'], 'longitude' => $attributes['lng']],
                 );
+
+                foreach (self::BARANGAYS[$municipalityName] ?? [] as $index => $barangayName) {
+                    // Small deterministic offset (not a real survey point) so
+                    // barangays within a municipality aren't all stacked on
+                    // the exact same coordinate.
+                    $angle = ($index / max(count(self::BARANGAYS[$municipalityName]), 1)) * 2 * M_PI;
+                    $offset = 0.015;
+
+                    $municipality->barangays()->updateOrCreate(
+                        ['name' => $barangayName],
+                        ['latitude' => $attributes['lat'] + $offset * cos($angle), 'longitude' => $attributes['lng'] + $offset * sin($angle)],
+                    );
+                }
             }
         }
     }

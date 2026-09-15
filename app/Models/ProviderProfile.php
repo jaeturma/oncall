@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\AvailabilityStatus;
+use App\Enums\LocationSource;
 use App\Enums\UserStatus;
 use App\Enums\VerificationStatus;
 use Database\Factories\ProviderProfileFactory;
@@ -12,7 +13,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['user_id', 'province_id', 'municipality_id', 'bio', 'available_now', 'availability_status', 'service_radius_km', 'verification_status', 'credentials_metadata', 'rating_cached', 'completed_jobs_cached'])]
+#[Fillable(['user_id', 'province_id', 'municipality_id', 'barangay_id', 'bio', 'available_now', 'availability_status', 'service_radius_km', 'verification_status', 'credentials_metadata', 'rating_cached', 'completed_jobs_cached', 'latitude', 'longitude', 'location_source', 'location_updated_at'])]
 class ProviderProfile extends Model
 {
     /** @use HasFactory<ProviderProfileFactory> */
@@ -20,7 +21,17 @@ class ProviderProfile extends Model
 
     protected function casts(): array
     {
-        return ['available_now' => 'boolean', 'availability_status' => AvailabilityStatus::class, 'credentials_metadata' => 'array', 'verification_status' => VerificationStatus::class, 'rating_cached' => 'decimal:2'];
+        return [
+            'available_now' => 'boolean',
+            'availability_status' => AvailabilityStatus::class,
+            'credentials_metadata' => 'array',
+            'verification_status' => VerificationStatus::class,
+            'rating_cached' => 'decimal:2',
+            'latitude' => 'decimal:6',
+            'longitude' => 'decimal:6',
+            'location_source' => LocationSource::class,
+            'location_updated_at' => 'datetime',
+        ];
     }
 
     /**
@@ -56,6 +67,20 @@ class ProviderProfile extends Model
     public function municipality(): BelongsTo
     {
         return $this->belongsTo(Municipality::class);
+    }
+
+    public function barangay(): BelongsTo
+    {
+        return $this->belongsTo(Barangay::class);
+    }
+
+    /**
+     * Whether this provider set their own base coordinates (as opposed to
+     * only ever being locatable via their municipality's centroid).
+     */
+    public function hasOwnCoordinates(): bool
+    {
+        return $this->latitude !== null && $this->longitude !== null;
     }
 
     public function providerServices(): HasMany

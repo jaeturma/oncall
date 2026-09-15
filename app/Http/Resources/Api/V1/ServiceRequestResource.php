@@ -5,6 +5,14 @@ namespace App\Http\Resources\Api\V1;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
+/**
+ * A service request before (or absent) an accepted Job. Exact location
+ * (latitude/longitude/address_line) is deliberately never serialized here —
+ * only province/municipality/barangay — per Phase O §17: "before an
+ * appropriate service relationship exists, show approximate area only."
+ * The exact snapshot becomes visible to the assigned provider (and the
+ * service finder) only via {@see JobResource}, once accepted.
+ */
 class ServiceRequestResource extends JsonResource
 {
     /**
@@ -24,6 +32,7 @@ class ServiceRequestResource extends JsonResource
             'service' => $this->whenLoaded('service', fn () => ['id' => $this->service->id, 'name' => $this->service->name]),
             'province' => $this->whenLoaded('province', fn () => ['id' => $this->province->id, 'name' => $this->province->name]),
             'municipality' => $this->whenLoaded('municipality', fn () => ['id' => $this->municipality->id, 'name' => $this->municipality->name]),
+            'barangay' => $this->whenLoaded('barangay', fn () => $this->barangay ? ['id' => $this->barangay->id, 'name' => $this->barangay->name] : null),
             'service_finder' => $this->whenLoaded('serviceFinder', fn () => ['id' => $this->serviceFinder->id, 'name' => $this->serviceFinder->name]),
             'requested_provider' => $this->whenLoaded('requestedProvider', fn () => ['id' => $this->requestedProvider->id, 'name' => $this->requestedProvider->name]),
             'job_id' => $this->whenLoaded('job', fn () => $this->job?->id),

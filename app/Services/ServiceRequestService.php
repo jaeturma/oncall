@@ -19,11 +19,17 @@ class ServiceRequestService
     {
         unset($attributes['safety_acknowledged']);
 
+        // Location is a snapshot of this specific request, never a write to
+        // the customer's profile/address — a later profile change must not
+        // retroactively alter historical job location (Phase O §18).
+        $hasExactLocation = isset($attributes['latitude'], $attributes['longitude']);
+
         $serviceRequest = $serviceFinder->serviceRequests()->create([
             ...$attributes,
             'requested_provider_id' => $providerProfile->user_id,
             'status' => ServiceRequestStatus::Requested,
             'safety_acknowledged_at' => now(),
+            'location_captured_at' => $hasExactLocation ? now() : null,
         ]);
 
         $this->notifications->dispatch(

@@ -45,8 +45,15 @@ class ProviderProfile {
     this.emailVerified,
     required this.verifiedDocumentTypes,
     this.distanceKm,
+    this.serviceRadiusKm,
+    this.areaMarker,
     this.province,
     this.municipality,
+    this.barangay,
+    this.latitude,
+    this.longitude,
+    this.locationSource,
+    this.locationUpdatedAt,
     required this.services,
   });
 
@@ -67,8 +74,18 @@ class ProviderProfile {
                 .map((e) => e.toString())
                 .toList(),
         distanceKm: parseNum(json['distance_km']),
+        serviceRadiusKm: json['service_radius_km'] as int?,
+        areaMarker: GeoPoint.fromJsonOrNull(json['area_marker']),
         province: IdName.fromJsonOrNull(json['province']),
         municipality: IdName.fromJsonOrNull(json['municipality']),
+        barangay: IdName.fromJsonOrNull(json['barangay']),
+        // The provider's own exact coordinates only ever appear when the
+        // viewer is that same provider — see ProviderProfileResource. Never
+        // present in a search result.
+        latitude: parseNum(json['latitude']),
+        longitude: parseNum(json['longitude']),
+        locationSource: json['location_source'] as String?,
+        locationUpdatedAt: parseDate(json['location_updated_at']),
         services: (json['services'] as List<dynamic>? ?? [])
             .map(
               (s) =>
@@ -89,8 +106,15 @@ class ProviderProfile {
   final bool? emailVerified;
   final List<String> verifiedDocumentTypes;
   final double? distanceKm;
+  final int? serviceRadiusKm;
+  final GeoPoint? areaMarker;
   final IdName? province;
   final IdName? municipality;
+  final IdName? barangay;
+  final double? latitude;
+  final double? longitude;
+  final String? locationSource;
+  final DateTime? locationUpdatedAt;
   final List<ProviderServiceOffering> services;
 
   String get displayName => name ?? 'Verified provider';

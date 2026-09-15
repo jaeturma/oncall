@@ -9,6 +9,8 @@ use App\Http\Controllers\Admin\EnforcementCaseController as AdminEnforcementCase
 use App\Http\Controllers\Admin\FinanceReportController;
 use App\Http\Controllers\Admin\JobController as AdminJobController;
 use App\Http\Controllers\Admin\LocationController;
+use App\Http\Controllers\Admin\LocationDiagnosticsController;
+use App\Http\Controllers\Admin\LocationSettingController;
 use App\Http\Controllers\Admin\NotificationLogController;
 use App\Http\Controllers\Admin\NotificationSettingController;
 use App\Http\Controllers\Admin\NotificationTemplateController;
@@ -62,6 +64,7 @@ Route::get('/', HomeController::class)->name('home');
 Route::get('/find-help', ProviderSearchController::class)->name('providers.search');
 Route::get('/providers/{provider_profile}', ProviderController::class)->name('providers.show');
 Route::get('/locations/{province}/municipalities', [LocationController::class, 'municipalities'])->name('locations.municipalities');
+Route::get('/locations/municipalities/{municipality}/barangays', [LocationController::class, 'barangays'])->name('locations.barangays');
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthenticatedSessionController::class, 'create'])->name('login');
     Route::post('/login', [AuthenticatedSessionController::class, 'store'])->middleware('throttle:6,1');
@@ -162,6 +165,14 @@ Route::middleware(['auth', 'account.active'])->group(function () {
         Route::get('/settings/notification-templates/{event_key}/edit', [NotificationTemplateController::class, 'edit'])->name('settings.notification-templates.edit');
         Route::patch('/settings/notification-templates/{event_key}', [NotificationTemplateController::class, 'update'])->name('settings.notification-templates.update');
         Route::get('/notifications/logs', [NotificationLogController::class, 'index'])->name('notifications.logs.index');
+
+        // Phase O: location/map administration. Web-only by construction —
+        // no equivalent route exists in routes/api.php, so a mobile Sanctum
+        // token cannot reach it regardless of role (same boundary as the SMS
+        // and notification settings above).
+        Route::get('/settings/location', [LocationSettingController::class, 'edit'])->name('settings.location.edit');
+        Route::patch('/settings/location', [LocationSettingController::class, 'update'])->name('settings.location.update');
+        Route::get('/location-diagnostics', [LocationDiagnosticsController::class, 'index'])->name('location-diagnostics.index');
     });
 
     // Commissions and finance reports are the one part of the admin area
