@@ -12,6 +12,10 @@ class JobPayment {
     this.paymentReference,
     this.confirmedAt,
     this.releasedAt,
+    this.purpose = 'SERVICE_TRANSACTION',
+    this.receiptNumber,
+    this.refundedAmount = 0,
+    this.refundableAmount = 0,
   });
 
   factory JobPayment.fromJson(Map<String, dynamic> json) => JobPayment(
@@ -24,6 +28,10 @@ class JobPayment {
     paymentReference: json['payment_reference'] as String?,
     confirmedAt: parseDate(json['confirmed_at']),
     releasedAt: parseDate(json['released_at']),
+    purpose: json['purpose'] as String? ?? 'SERVICE_TRANSACTION',
+    receiptNumber: json['receipt_number'] as String?,
+    refundedAmount: parseNum(json['refunded_amount']) ?? 0,
+    refundableAmount: parseNum(json['refundable_amount']) ?? 0,
   );
 
   final int id;
@@ -35,6 +43,13 @@ class JobPayment {
   final String? paymentReference;
   final DateTime? confirmedAt;
   final DateTime? releasedAt;
+  final String purpose;
+  final String? receiptNumber;
+  final double refundedAmount;
+  final double refundableAmount;
+
+  bool get isRefundable =>
+      (status == 'PAID' || status == 'RELEASED') && refundableAmount > 0;
 }
 
 class JobDispute {

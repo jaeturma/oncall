@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../core/api_exception.dart';
 import '../../core/formatters.dart';
 import '../../data/job_repository.dart';
+import '../../data/payment_repository.dart';
 import '../../data/review_repository.dart';
 import '../../models/job.dart';
 import '../../models/review_eligibility.dart';
@@ -77,28 +78,113 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
   });
 
   Future<void> _confirmPayment(JobPayment payment) async {
-    final methodController = TextEditingController();
+    final paymentRepository = context.read<PaymentRepository>();
+    List<String> methods;
+    try {
+      methods = await paymentRepository.fetchPaymentMethods();
+    } on ApiException catch (error) {
+      if (mounted) {
+        showErrorSnackBar(context, error.message);
+      }
+      return;
+    }
+    if (methods.isEmpty || !mounted) {
+      return;
+    }
+
     final referenceController = TextEditingController();
+    var selectedMethod = methods.first;
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Confirm payment'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Service amount: ${formatPeso(payment.grossAmount)}'),
+              Text('Platform fee: ${formatPeso(payment.platformFee)}'),
+              Text(
+                'Provider receives: ${formatPeso(payment.netAmount)}',
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                initialValue: selectedMethod,
+                decoration: const InputDecoration(labelText: 'How you paid'),
+                items: [
+                  for (final method in methods)
+                    DropdownMenuItem(
+                      value: method,
+                      child: Text(humanizeStatus(method)),
+                    ),
+                ],
+                onChanged: (value) {
+                  if (value != null) {
+                    setDialogState(() => selectedMethod = value);
+                  }
+                },
+              ),
+              TextField(
+                controller: referenceController,
+                decoration: const InputDecoration(labelText: 'Reference'),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Confirm'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (result != true) {
+      return;
+    }
+
+    await _run(() async {
+      await paymentRepository.confirmPayment(
+        payment.id,
+        paymentMethod: selectedMethod,
+        paymentReference: referenceController.text.trim(),
+      );
+    });
+  }
+
+  void _openReceipt(JobPayment payment) =>
+      context.push('/payments/${payment.id}/receipt');
+
+  Future<void> _requestRefund(JobPayment payment) async {
+    final amountController = TextEditingController();
+    final reasonController = TextEditingController();
     final result = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Confirm payment'),
+        title: const Text('Request a refund'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              'Confirm you paid the provider ${formatPeso(payment.grossAmount)}.',
+              'Up to ${formatPeso(payment.refundableAmount)} is still refundable.',
             ),
             const SizedBox(height: 12),
             TextField(
-              controller: methodController,
-              decoration: const InputDecoration(
-                labelText: 'How you paid (e.g. GCash)',
+              controller: amountController,
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
               ),
+              decoration: const InputDecoration(labelText: 'Amount'),
             ),
             TextField(
-              controller: referenceController,
-              decoration: const InputDecoration(labelText: 'Reference'),
+              controller: reasonController,
+              decoration: const InputDecoration(labelText: 'Reason'),
             ),
           ],
         ),
@@ -109,7 +195,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Confirm'),
+            child: const Text('Submit'),
           ),
         ],
       ),
@@ -119,11 +205,14 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     }
 
     await _run(() async {
-      await context.read<JobRepository>().confirmPayment(
+      await context.read<PaymentRepository>().requestRefund(
         payment.id,
-        paymentMethod: methodController.text.trim(),
-        paymentReference: referenceController.text.trim(),
+        amount: amountController.text.trim(),
+        reason: reasonController.text.trim(),
       );
+      if (mounted) {
+        showSuccessSnackBar(context, 'Refund request submitted for review.');
+      }
     });
   }
 
@@ -423,6 +512,28 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                           FilledButton(
                             onPressed: () => _confirmPayment(job.payment!),
                             child: const Text('Confirm payment made'),
+                          ),
+                        ],
+                        if (job.payment!.status == 'PAID' ||
+                            job.payment!.status == 'RELEASED') ...[
+                          const SizedBox(height: 12),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              OutlinedButton(
+                                onPressed: () => _openReceipt(job.payment!),
+                                child: const Text('View receipt'),
+                              ),
+                              if (!_acting &&
+                                  iAmFinder &&
+                                  job.payment!.isRefundable)
+                                OutlinedButton(
+                                  onPressed: () =>
+                                      _requestRefund(job.payment!),
+                                  child: const Text('Request a refund'),
+                                ),
+                            ],
                           ),
                         ],
                       ],

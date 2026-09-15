@@ -73,20 +73,4 @@ class JobRepository {
 
   Future<void> withdrawDispute(int disputeId) =>
       _client.patch('/disputes/$disputeId/withdraw');
-
-  Future<JobPayment> confirmPayment(
-    int jobPaymentId, {
-    required String paymentMethod,
-    required String paymentReference,
-  }) async {
-    final json = await _client.patch(
-      '/job-payments/$jobPaymentId/confirm',
-      data: {
-        'payment_method': paymentMethod,
-        'payment_reference': paymentReference,
-      },
-    );
-
-    return JobPayment.fromJson(json['data'] as Map<String, dynamic>);
-  }
 }

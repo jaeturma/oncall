@@ -14,6 +14,8 @@ use App\Http\Controllers\Admin\LocationSettingController;
 use App\Http\Controllers\Admin\NotificationLogController;
 use App\Http\Controllers\Admin\NotificationSettingController;
 use App\Http\Controllers\Admin\NotificationTemplateController;
+use App\Http\Controllers\Admin\PaymentReconciliationController;
+use App\Http\Controllers\Admin\PaymentSettingController;
 use App\Http\Controllers\Admin\ProviderController as AdminProviderController;
 use App\Http\Controllers\Admin\ReportController as AdminReportController;
 use App\Http\Controllers\Admin\ResolvedEnforcementCaseController;
@@ -52,6 +54,7 @@ use App\Http\Controllers\Provider\DeclinedServiceRequestController;
 use App\Http\Controllers\Provider\ProfileController;
 use App\Http\Controllers\ProviderController;
 use App\Http\Controllers\ProviderSearchController;
+use App\Http\Controllers\RefundController;
 use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\ReviewHistoryController;
 use App\Http\Controllers\ReviewReportController;
@@ -59,6 +62,7 @@ use App\Http\Controllers\ReviewResponseController;
 use App\Http\Controllers\ServiceRequestController;
 use App\Http\Controllers\SponsorController;
 use App\Http\Controllers\Staff\JobPaymentReleaseController;
+use App\Http\Controllers\Staff\RefundReviewController;
 use App\Http\Controllers\Staff\WithdrawalReviewController;
 use App\Http\Controllers\UserReportController;
 use App\Http\Controllers\VerificationController;
@@ -122,6 +126,8 @@ Route::middleware(['auth', 'account.active'])->group(function () {
     Route::post('/jobs/{job}/disputes', [DisputeController::class, 'store'])->middleware('throttle:5,1')->name('disputes.store');
     Route::patch('/disputes/{dispute}/withdraw', [DisputeController::class, 'withdraw'])->name('disputes.withdraw');
     Route::patch('/job-payments/{job_payment}/confirm', [JobPaymentController::class, 'confirm'])->middleware('throttle:10,1')->name('job-payments.confirm');
+    Route::get('/payments/{job_payment}/receipt', [JobPaymentController::class, 'receipt'])->name('payments.receipt');
+    Route::post('/payments/{job_payment}/refund-requests', [RefundController::class, 'store'])->middleware('throttle:5,1')->name('payments.refund-requests.store');
     Route::get('/wallet', [WalletController::class, 'index'])->name('wallet.index');
     Route::get('/wallet/withdrawals', [WithdrawalController::class, 'index'])->name('withdrawals.index');
     Route::post('/wallet/withdrawals', [WithdrawalController::class, 'store'])->middleware('throttle:6,1')->name('withdrawals.store');
@@ -193,6 +199,11 @@ Route::middleware(['auth', 'account.active'])->group(function () {
         Route::get('/review-reports/{review_report}', [AdminReviewReportController::class, 'show'])->name('review-reports.show');
         Route::patch('/review-reports/{review_report}', [AdminReviewReportController::class, 'update'])->name('review-reports.update');
         Route::patch('/reviews/{review}/moderate', ReviewModerationController::class)->name('reviews.moderate');
+
+        // Phase Q: payment administration. Web-only by construction — no
+        // equivalent route exists in routes/api.php.
+        Route::get('/settings/payments', [PaymentSettingController::class, 'edit'])->name('settings.payments.edit');
+        Route::patch('/settings/payments', [PaymentSettingController::class, 'update'])->name('settings.payments.update');
     });
 
     // Commissions and finance reports are the one part of the admin area
@@ -209,6 +220,15 @@ Route::middleware(['auth', 'account.active'])->group(function () {
         Route::get('/finance/users/{user}/statement', [FinanceReportController::class, 'userStatement'])->name('finance.statement');
     });
 
+    // Phase Q: internal-consistency reconciliation queue. No external
+    // gateway exists to reconcile against (see ReconciliationService's
+    // docblock), so this is its own narrower gate rather than folded into
+    // view-finance-reports.
+    Route::prefix('admin')->name('admin.')->middleware('can:view-payment-reconciliation')->group(function () {
+        Route::get('/finance/reconciliation', [PaymentReconciliationController::class, 'index'])->name('finance.reconciliation.index');
+        Route::patch('/finance/reconciliation/{reconciliation_flag}', [PaymentReconciliationController::class, 'resolve'])->name('finance.reconciliation.resolve');
+    });
+
     // Back-office finance queues (Admin, Accounting, Budget, Cashier). Same
     // backstop principle as above, using the broader back-office gate since
     // these queues are shared across all four staff roles; each route's own
@@ -219,6 +239,8 @@ Route::middleware(['auth', 'account.active'])->group(function () {
         Route::patch('/job-payments/{job_payment}', [JobPaymentReleaseController::class, 'update'])->name('job-payments.update');
         Route::get('/withdrawals', [WithdrawalReviewController::class, 'index'])->name('withdrawals.index');
         Route::patch('/withdrawals/{withdrawal}', [WithdrawalReviewController::class, 'update'])->name('withdrawals.update');
+        Route::get('/refunds', [RefundReviewController::class, 'index'])->name('refunds.index');
+        Route::patch('/refunds/{refund}', [RefundReviewController::class, 'update'])->name('refunds.update');
     });
 });
 

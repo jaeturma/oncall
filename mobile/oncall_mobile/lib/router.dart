@@ -17,6 +17,7 @@ import 'screens/shared/enforcement_cases_list_screen.dart';
 import 'screens/shared/job_detail_screen.dart';
 import 'screens/shared/location_picker_screen.dart';
 import 'screens/shared/notifications_screen.dart';
+import 'screens/shared/receipt_screen.dart';
 import 'screens/shared/report_user_screen.dart';
 import 'screens/shared/service_request_detail_screen.dart';
 import 'screens/shared/sponsor_screen.dart';
@@ -116,6 +117,12 @@ GoRouter buildRouter(AuthState authState) {
         builder: (context, state) => SubmitReviewScreen(
           jobId: int.parse(state.pathParameters['id']!),
           counterpartName: state.extra as String? ?? 'the other party',
+        ),
+      ),
+      GoRoute(
+        path: '/payments/:id/receipt',
+        builder: (context, state) => ReceiptScreen(
+          jobPaymentId: int.parse(state.pathParameters['id']!),
         ),
       ),
       GoRoute(

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\UserRole;
 use App\Models\Job;
 use App\Models\JobMessage;
+use App\Models\PaymentSetting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\View\View;
@@ -31,6 +32,6 @@ class JobController extends Controller
 
         JobMessage::query()->where('job_id', $job->id)->whereNull('read_at')->where('sender_id', '!=', $request->user()->id)->update(['read_at' => now()]);
 
-        return view('jobs.show', ['job' => $job]);
+        return view('jobs.show', ['job' => $job, 'paymentMethods' => PaymentSetting::current()->allowed_payment_methods]);
     }
 }

@@ -14,6 +14,7 @@ import 'data/location_repository.dart';
 import 'data/messages_repository.dart';
 import 'data/mobile_verification_repository.dart';
 import 'data/notification_repository.dart';
+import 'data/payment_repository.dart';
 import 'data/profile_repository.dart';
 import 'data/provider_repository.dart';
 import 'data/provider_search_repository.dart';
@@ -124,6 +125,9 @@ class _OncallAppState extends State<OncallApp> {
           create: (_) => ServiceRequestRepository(_apiClient),
         ),
         Provider<JobRepository>(create: (_) => JobRepository(_apiClient)),
+        Provider<PaymentRepository>(
+          create: (_) => PaymentRepository(_apiClient),
+        ),
         Provider<ReviewRepository>(
           create: (_) => ReviewRepository(_apiClient),
         ),

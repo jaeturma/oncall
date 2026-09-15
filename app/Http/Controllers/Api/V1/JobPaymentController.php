@@ -5,9 +5,12 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ConfirmJobPaymentRequest;
 use App\Http\Resources\Api\V1\JobPaymentResource;
+use App\Http\Resources\Api\V1\ReceiptResource;
 use App\Models\JobPayment;
 use App\Services\JobPaymentService;
+use App\Services\ReceiptService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Gate;
 
 class JobPaymentController extends Controller
 {
@@ -21,5 +24,12 @@ class JobPaymentController extends Controller
         );
 
         return response()->json(['data' => new JobPaymentResource($jobPayment->fresh())]);
+    }
+
+    public function receipt(JobPayment $jobPayment, ReceiptService $receipts): JsonResponse
+    {
+        Gate::authorize('viewReceipt', $jobPayment);
+
+        return response()->json(['data' => new ReceiptResource($receipts->forPayment($jobPayment))]);
     }
 }

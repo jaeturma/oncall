@@ -18,6 +18,7 @@ use App\Http\Controllers\Api\V1\MessagesController;
 use App\Http\Controllers\Api\V1\MobileVerificationController;
 use App\Http\Controllers\Api\V1\NotificationController;
 use App\Http\Controllers\Api\V1\NotificationPreferenceController;
+use App\Http\Controllers\Api\V1\PaymentMethodController;
 use App\Http\Controllers\Api\V1\ProfileController;
 use App\Http\Controllers\Api\V1\Provider\AcceptedServiceRequestController;
 use App\Http\Controllers\Api\V1\Provider\AvailabilityController;
@@ -26,6 +27,7 @@ use App\Http\Controllers\Api\V1\Provider\ProfileController as ProviderProfileCon
 use App\Http\Controllers\Api\V1\ProviderController;
 use App\Http\Controllers\Api\V1\ProviderReviewController;
 use App\Http\Controllers\Api\V1\ProviderSearchController;
+use App\Http\Controllers\Api\V1\RefundController;
 use App\Http\Controllers\Api\V1\ReviewController;
 use App\Http\Controllers\Api\V1\ReviewHistoryController;
 use App\Http\Controllers\Api\V1\ReviewReportController;
@@ -103,6 +105,10 @@ Route::name('api.')->group(function () {
         Route::get('/jobs/{job}', [JobController::class, 'show'])->name('jobs.show');
         Route::patch('/jobs/{job}/status', JobStatusController::class)->name('jobs.status.update');
         Route::patch('/job-payments/{job_payment}/confirm', [JobPaymentController::class, 'confirm'])->middleware('throttle:10,1')->name('job-payments.confirm');
+        Route::get('/payment-methods', PaymentMethodController::class)->name('payment-methods.index');
+        Route::get('/payments/{job_payment}/receipt', [JobPaymentController::class, 'receipt'])->name('payments.receipt');
+        Route::get('/payments/{job_payment}/refund-requests', [RefundController::class, 'index'])->name('payments.refund-requests.index');
+        Route::post('/payments/{job_payment}/refund-requests', [RefundController::class, 'store'])->middleware('throttle:5,1')->name('payments.refund-requests.store');
         Route::post('/jobs/{job}/messages', [JobMessageController::class, 'store'])->middleware('throttle:20,1')->name('jobs.messages.store');
         Route::post('/jobs/{job}/reviews', [ReviewController::class, 'store'])->middleware('throttle:5,1')->name('jobs.reviews.store');
         Route::get('/jobs/{job}/review-eligibility', JobReviewEligibilityController::class)->name('jobs.review-eligibility');

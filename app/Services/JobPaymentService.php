@@ -3,13 +3,18 @@
 namespace App\Services;
 
 use App\Enums\JobPaymentStatus;
+use App\Enums\PaymentAttemptStatus;
+use App\Enums\PaymentMethod;
 use App\Enums\WalletTransactionStatus;
 use App\Enums\WalletTransactionType;
 use App\Models\AuditLog;
 use App\Models\Job;
 use App\Models\JobPayment;
+use App\Models\PaymentSetting;
 use App\Models\User;
 use App\Services\Notifications\NotificationDispatcher;
+use App\Services\Payments\PaymentManager;
+use App\Services\Payments\PaymentRequest;
 use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 
@@ -23,6 +28,8 @@ class JobPaymentService
     public function __construct(
         private readonly WalletLedger $ledger,
         private readonly NotificationDispatcher $notifications,
+        private readonly FeeCalculationService $fees,
+        private readonly PaymentManager $gateways,
     ) {}
 
     /** Called when a job is marked completed. Idempotent. */
@@ -30,22 +37,48 @@ class JobPaymentService
     {
         return JobPayment::query()->firstOrCreate(
             ['job_id' => $job->id],
-            $this->split($job),
+            $this->fees->split($job),
         );
     }
 
+    /**
+     * A payment can be confirmed while Pending (first attempt) or Reversed
+     * (a safe retry after a chargeback/dispute reversal, without discarding
+     * the earlier attempts or ledger entries).
+     */
     public function confirmPaid(JobPayment $payment, User $finder, string $method, string $reference): JobPayment
     {
-        return DB::transaction(function () use ($payment, $finder, $method, $reference): JobPayment {
+        $gateway = $this->gateways->active();
+        $methodEnum = PaymentMethod::tryFrom(strtoupper($method)) ?? PaymentMethod::Other;
+
+        return DB::transaction(function () use ($payment, $finder, $method, $reference, $gateway, $methodEnum): JobPayment {
             $locked = JobPayment::whereKey($payment)->lockForUpdate()->firstOrFail();
 
-            if ($locked->status !== JobPaymentStatus::Pending) {
+            if (! in_array($locked->status, [JobPaymentStatus::Pending, JobPaymentStatus::Reversed], true)) {
                 throw new ConflictHttpException('This job payment has already been confirmed.');
             }
 
             $this->assertNoOpenDispute($locked);
 
             $before = $locked->toArray();
+
+            $result = $gateway->charge(new PaymentRequest($locked, $methodEnum, (string) $locked->net_amount, $reference));
+
+            // The Manual gateway never fails, so this branch is unreachable today.
+            // A future real gateway integration would still want the rejected
+            // attempt recorded outside this transaction before throwing.
+            $locked->attempts()->create([
+                'method' => $method,
+                'status' => $result->successful ? PaymentAttemptStatus::Verified : PaymentAttemptStatus::Rejected,
+                'gateway' => $result->gateway,
+                'gateway_reference' => $result->gatewayReference,
+                'submitted_by' => $finder->id,
+                'rejection_reason' => $result->failureReason,
+            ]);
+
+            if (! $result->successful) {
+                throw new ConflictHttpException($result->failureReason ?? 'Payment could not be confirmed.');
+            }
 
             $earning = $this->ledger->post(
                 $locked->provider,
@@ -60,6 +93,7 @@ class JobPaymentService
                 'status' => JobPaymentStatus::Paid,
                 'payment_method' => $method,
                 'payment_reference' => $reference,
+                'receipt_number' => $locked->receipt_number ?? $this->receiptNumber($locked),
                 'earning_transaction_id' => $earning->id,
                 'confirmed_by' => $finder->id,
                 'confirmed_at' => now(),
@@ -76,6 +110,11 @@ class JobPaymentService
 
             return $locked;
         });
+    }
+
+    private function receiptNumber(JobPayment $payment): string
+    {
+        return sprintf('%s-%06d', PaymentSetting::current()->receipt_prefix, $payment->id);
     }
 
     public function release(JobPayment $payment, User $staff): JobPayment
@@ -128,6 +167,13 @@ class JobPaymentService
 
             $locked->update(['status' => JobPaymentStatus::Reversed, 'notes' => $reason]);
             $this->audit($staff, 'job_payment.reversed', $locked, $before);
+            $this->notifications->dispatch(
+                $locked->provider,
+                'earning_reversed',
+                ['amount' => $locked->net_amount, 'reason' => $reason],
+                ['screen' => 'wallet'],
+                dedupKey: "earning_reversed:job_payment:{$locked->id}",
+            );
 
             return $locked;
         });
@@ -147,7 +193,7 @@ class JobPaymentService
             }
 
             if ($earning->status === WalletTransactionStatus::Posted) {
-                $this->ledger->post($locked->provider, WalletTransactionType::Adjustment, bcmul($refundAmount, '-1', 2), WalletTransactionStatus::Posted, 'Dispute partial refund: '.$reason, $locked);
+                $this->ledger->post($locked->provider, WalletTransactionType::Refund, bcmul($refundAmount, '-1', 2), WalletTransactionStatus::Posted, 'Dispute partial refund: '.$reason, $locked);
             } elseif ($earning->status === WalletTransactionStatus::Pending) {
                 $this->ledger->void($earning);
                 $reduced = bcsub((string) $locked->net_amount, $refundAmount, 2);
@@ -155,7 +201,13 @@ class JobPaymentService
                 $locked->update(['earning_transaction_id' => $replacement->id]);
             }
 
-            $locked->update(['status' => JobPaymentStatus::Released, 'released_by' => $staff->id, 'released_at' => now(), 'notes' => $reason]);
+            $locked->update([
+                'status' => JobPaymentStatus::Released,
+                'released_by' => $staff->id,
+                'released_at' => now(),
+                'notes' => $reason,
+                'refunded_amount' => bcadd((string) $locked->refunded_amount, $refundAmount, 2),
+            ]);
             $this->audit($staff, 'job_payment.partial_refund', $locked, []);
         });
     }
@@ -165,33 +217,6 @@ class JobPaymentService
         if ($payment->job->dispute?->isOpen()) {
             throw new ConflictHttpException('This job has an open dispute; the payment is frozen until it is resolved.');
         }
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function split(Job $job): array
-    {
-        $gross = (string) $job->agreed_price;
-        $percent = $this->platformPercent($job);
-        $fee = bcmul($gross, bcdiv($percent, '100', 6), 2);
-
-        return [
-            'provider_id' => $job->provider_id,
-            'gross_amount' => $gross,
-            'platform_fee' => $fee,
-            'net_amount' => bcsub($gross, $fee, 2),
-            'status' => JobPaymentStatus::Pending,
-        ];
-    }
-
-    private function platformPercent(Job $job): string
-    {
-        $override = $job->provider->accountType?->platform_commission_percent;
-
-        return $override !== null
-            ? (string) $override
-            : (string) config('oncall.platform.commission_percent', 15);
     }
 
     /**

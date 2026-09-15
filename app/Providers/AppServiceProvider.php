@@ -10,6 +10,7 @@ use App\Models\EnforcementCase;
 use App\Models\Job;
 use App\Models\JobMessage;
 use App\Models\JobPayment;
+use App\Models\Refund;
 use App\Models\Review;
 use App\Models\ReviewReport;
 use App\Models\ServiceRequest;
@@ -23,6 +24,7 @@ use App\Policies\EnforcementCasePolicy;
 use App\Policies\JobMessagePolicy;
 use App\Policies\JobPaymentPolicy;
 use App\Policies\JobPolicy;
+use App\Policies\RefundPolicy;
 use App\Policies\ReviewPolicy;
 use App\Policies\ReviewReportPolicy;
 use App\Policies\ServiceRequestPolicy;
@@ -66,6 +68,7 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(Withdrawal::class, WithdrawalPolicy::class);
         Gate::policy(JobPayment::class, JobPaymentPolicy::class);
         Gate::policy(Dispute::class, DisputePolicy::class);
+        Gate::policy(Refund::class, RefundPolicy::class);
 
         Gate::define('view-finance-reports', fn (User $user): bool => in_array($user->role, [UserRole::Admin, UserRole::Accounting], true));
 
@@ -110,6 +113,13 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('manage-review-settings', fn (User $user): bool => $user->canAccessAdmin());
         Gate::define('moderate-reviews', fn (User $user): bool => $user->canAccessAdmin());
         Gate::define('view-review-reports', fn (User $user): bool => $user->canAccessAdmin());
+
+        // Phase Q: payment/reconciliation administration. Same Admin-only
+        // collapse as every prior phase's settings surface — money-movement
+        // authorization itself (confirm/release/reverse/refund) stays
+        // Policy-based (JobPaymentPolicy/RefundPolicy), not a named gate.
+        Gate::define('manage-payment-settings', fn (User $user): bool => $user->canAccessAdmin());
+        Gate::define('view-payment-reconciliation', fn (User $user): bool => $user->canAccessAdmin());
 
         // Laravel's slim skeleton has no EventServiceProvider to auto-wire
         // this, so it's registered explicitly: User implements

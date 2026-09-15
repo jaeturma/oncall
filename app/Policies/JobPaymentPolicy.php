@@ -9,7 +9,7 @@ use App\Models\User;
 
 class JobPaymentPolicy
 {
-    private const RELEASERS = [UserRole::Admin, UserRole::Accounting];
+    public const RELEASERS = [UserRole::Admin, UserRole::Accounting];
 
     public function confirm(User $user, JobPayment $payment): bool
     {
@@ -33,5 +33,20 @@ class JobPaymentPolicy
     public function viewQueue(User $user): bool
     {
         return $user->canAccessBackOffice();
+    }
+
+    public function viewReceipt(User $user, JobPayment $payment): bool
+    {
+        return $user->id === $payment->job->service_finder_id
+            || $user->id === $payment->provider_id
+            || $user->canAccessBackOffice();
+    }
+
+    public function requestRefund(User $user, JobPayment $payment): bool
+    {
+        return (
+            $user->id === $payment->job->service_finder_id
+            || $user->canAccessBackOffice()
+        ) && in_array($payment->status, [JobPaymentStatus::Paid, JobPaymentStatus::Released], true);
     }
 }

@@ -88,7 +88,9 @@
                             @csrf @method('PATCH')
                             <p class="text-sm text-ink-secondary sm:col-span-2">Confirm you paid the provider <span class="font-semibold text-ink">{{ $peso($payment->gross_amount) }}</span> for this job. Oncall records the payment; it does not process it.</p>
                             <x-form.select name="payment_method" label="How you paid" required>
-                                <option value="Cash">Cash</option><option value="GCash">GCash</option><option value="Maya">Maya</option><option value="Bank transfer">Bank transfer</option>
+                                @foreach($paymentMethods as $method)
+                                    <option value="{{ $method }}">{{ str($method)->replace('_', ' ')->title() }}</option>
+                                @endforeach
                             </x-form.select>
                             <x-form.input name="payment_reference" label="Reference" maxlength="120" placeholder="Receipt no., transaction ID, or 'paid in cash on site'" required />
                             <div class="sm:col-span-2"><x-ui.button variant="primary" data-loading-text="Confirming…">Confirm payment made</x-ui.button></div>
@@ -96,6 +98,25 @@
                     @elseif($payment->status === App\Enums\JobPaymentStatus::Pending)
                         <p class="mt-3 text-sm text-ink-muted">The customer confirms payment from this page once the job is done.</p>
                     @endcan
+
+                    @if(in_array($payment->status, [App\Enums\JobPaymentStatus::Paid, App\Enums\JobPaymentStatus::Released], true))
+                        <div class="mt-5 flex flex-wrap items-center gap-3 border-t border-line pt-5">
+                            @can('viewReceipt', $payment)
+                                <x-ui.button variant="secondary" size="sm" :href="route('payments.receipt', $payment)">View receipt</x-ui.button>
+                            @endcan
+                            @can('requestRefund', $payment)
+                                <details class="w-full sm:w-auto">
+                                    <summary class="cursor-pointer text-sm font-semibold text-ink underline">Request a refund</summary>
+                                    <form class="mt-3 grid gap-3 sm:grid-cols-2" method="POST" action="{{ route('payments.refund-requests.store', $payment) }}">
+                                        @csrf
+                                        <x-form.input name="amount" type="number" step="0.01" max="{{ $payment->refundableAmount() }}" label="Amount to refund" placeholder="Up to {{ $peso($payment->refundableAmount()) }}" required />
+                                        <x-form.input name="reason" label="Reason" maxlength="1000" required />
+                                        <div class="sm:col-span-2"><x-ui.button variant="primary" size="sm" data-loading-text="Submitting…">Submit refund request</x-ui.button></div>
+                                    </form>
+                                </details>
+                            @endcan
+                        </div>
+                    @endif
                 </section>
             @endif
 

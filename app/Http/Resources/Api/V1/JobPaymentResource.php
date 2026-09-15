@@ -16,9 +16,13 @@ class JobPaymentResource extends JsonResource
         return [
             'id' => $this->id,
             'status' => $this->status->value,
+            'purpose' => $this->purpose->value,
             'gross_amount' => $this->gross_amount,
             'platform_fee' => $this->platform_fee,
             'net_amount' => $this->net_amount,
+            'refunded_amount' => (string) $this->refunded_amount,
+            'refundable_amount' => $this->refundableAmount(),
+            'receipt_number' => $this->receipt_number,
             'payment_method' => $this->payment_method,
             'payment_reference' => $this->payment_reference,
             'confirmed_at' => $this->confirmed_at,
