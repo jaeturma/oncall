@@ -149,12 +149,35 @@
                     @if($job->reviews->isNotEmpty())
                         <ul class="mt-4 grid gap-3">
                             @foreach($job->reviews as $review)
+                                @if($review->status->value === 'WITHDRAWN')
+                                    @continue
+                                @endif
                                 <li class="rounded-xl bg-surface-muted p-4">
                                     <div class="flex flex-wrap items-center justify-between gap-2 text-sm">
                                         <p class="font-semibold text-ink">{{ $review->reviewer->name }} <span class="font-normal text-ink-muted">reviewed</span> {{ $review->reviewee->name }}</p>
                                         <span class="text-gold-500" aria-label="{{ $review->rating }} out of 5 stars">{{ str_repeat('★', $review->rating) }}<span class="text-slate-300">{{ str_repeat('★', 5 - $review->rating) }}</span></span>
                                     </div>
                                     @if($review->comment)<p class="mt-2 whitespace-pre-line text-sm text-ink-secondary">{{ $review->comment }}</p>@endif
+
+                                    @if($review->hasResponse())
+                                        <div class="mt-2 rounded-lg bg-surface p-3">
+                                            <p class="text-xs font-semibold text-ink">Response from provider</p>
+                                            <p class="mt-1 whitespace-pre-line text-sm text-ink-secondary">{{ $review->response }}</p>
+                                        </div>
+                                    @elseif(auth()->id() === $review->reviewee_id)
+                                        <form class="mt-2 grid gap-2" method="POST" action="{{ route('reviews.response.store', $review) }}">
+                                            @csrf
+                                            <textarea class="textarea text-sm" name="response" rows="2" maxlength="1000" placeholder="Write a public response…" required></textarea>
+                                            <div><x-ui.button variant="secondary" size="sm">Post response</x-ui.button></div>
+                                        </form>
+                                    @endif
+
+                                    @if(auth()->id() === $review->reviewer_id)
+                                        <form class="mt-2" method="POST" action="{{ route('reviews.withdraw', $review) }}" onsubmit="return confirm('Withdraw this review? It will no longer be public.');">
+                                            @csrf @method('PATCH')
+                                            <button type="submit" class="text-xs font-medium text-ink-muted hover:text-danger-600">Withdraw review</button>
+                                        </form>
+                                    @endif
                                 </li>
                             @endforeach
                         </ul>

@@ -2,15 +2,18 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\ReviewStatus;
 use App\Enums\UserRole;
 use App\Models\Municipality;
 use App\Models\ProviderDocument;
 use App\Models\ProviderProfile;
 use App\Models\Province;
 use App\Models\Review;
+use App\Models\ReviewSetting;
 use App\Models\ServiceRequest;
 use App\Models\User;
 use App\Services\DistanceEstimator;
+use App\Services\ProviderReputationService;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -23,7 +26,7 @@ class ProviderController extends Controller
      * Service Finder sees the provider's real name; direct contact details are
      * never sent to the browser here for anyone.
      */
-    public function __invoke(Request $request, ProviderProfile $providerProfile, DistanceEstimator $distanceEstimator): View
+    public function __invoke(Request $request, ProviderProfile $providerProfile, DistanceEstimator $distanceEstimator, ProviderReputationService $reputation): View
     {
         $isRequestable = $providerProfile->isRequestable();
         $providerProfile->unsetRelation('user');
@@ -49,20 +52,24 @@ class ProviderController extends Controller
             $providerProfile->load('user:id,name');
         }
 
+        $sort = $request->string('sort', 'newest')->value();
         $reviews = Review::query()
             ->where('reviewee_id', $providerProfile->user_id)
-            ->whereNotNull('comment')
+            ->where('status', ReviewStatus::Published)
             ->with('reviewer:id,name')
-            ->latest('id')
-            ->limit(10)
-            ->get();
+            ->when($sort === 'highest', fn ($query) => $query->orderByDesc('rating')->orderByDesc('created_at'))
+            ->when($sort === 'lowest', fn ($query) => $query->orderBy('rating')->orderByDesc('created_at'))
+            ->when($sort === 'newest', fn ($query) => $query->orderByDesc('created_at'))
+            ->paginate(ReviewSetting::current()->reviews_per_page)
+            ->withQueryString();
 
         return view('providers.show', [
             'profile' => $providerProfile,
             'reveal' => $reveal,
             'canRequest' => $reveal && $viewer->can('create', ServiceRequest::class),
             'reviews' => $reviews,
-            'reviewsCount' => (int) ($providerProfile->user()->value('reviews_count') ?? 0),
+            'reviewSort' => $sort,
+            'reputation' => $reputation->summary($providerProfile),
             'distanceKm' => $distanceKm,
         ]);
     }

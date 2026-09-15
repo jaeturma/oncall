@@ -1,4 +1,5 @@
 import '../core/json.dart';
+import 'provider_reputation.dart';
 
 class ProviderServiceOffering {
   ProviderServiceOffering({
@@ -41,6 +42,7 @@ class ProviderProfile {
     required this.verificationStatus,
     this.rating,
     required this.completedJobs,
+    this.reputation,
     this.mobileVerified,
     this.emailVerified,
     required this.verifiedDocumentTypes,
@@ -67,6 +69,11 @@ class ProviderProfile {
         verificationStatus: json['verification_status'] as String,
         rating: parseNum(json['rating']),
         completedJobs: json['completed_jobs'] as int? ?? 0,
+        reputation: json['reputation'] == null
+            ? null
+            : ProviderReputation.fromJson(
+                json['reputation'] as Map<String, dynamic>,
+              ),
         mobileVerified: json['mobile_verified'] as bool?,
         emailVerified: json['email_verified'] as bool?,
         verifiedDocumentTypes:
@@ -102,6 +109,7 @@ class ProviderProfile {
   final String verificationStatus;
   final double? rating;
   final int completedJobs;
+  final ProviderReputation? reputation;
   final bool? mobileVerified;
   final bool? emailVerified;
   final List<String> verifiedDocumentTypes;

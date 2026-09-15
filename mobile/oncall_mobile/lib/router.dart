@@ -4,11 +4,13 @@ import 'models/user.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/register_screen.dart';
 import 'screens/customer/customer_shell.dart';
+import 'screens/customer/my_reviews_screen.dart';
 import 'screens/customer/provider_profile_screen.dart';
 import 'screens/customer/request_service_screen.dart';
 import 'screens/customer/search_results_screen.dart';
 import 'screens/provider/provider_profile_edit_screen.dart';
 import 'screens/provider/provider_shell.dart';
+import 'screens/provider/reviews_received_screen.dart';
 import 'screens/shared/conversation_screen.dart';
 import 'screens/shared/enforcement_case_screen.dart';
 import 'screens/shared/enforcement_cases_list_screen.dart';
@@ -18,6 +20,7 @@ import 'screens/shared/notifications_screen.dart';
 import 'screens/shared/report_user_screen.dart';
 import 'screens/shared/service_request_detail_screen.dart';
 import 'screens/shared/sponsor_screen.dart';
+import 'screens/shared/submit_review_screen.dart';
 import 'screens/shared/verification_screen.dart';
 import 'screens/shared/wallet_screen.dart';
 import 'screens/shared/withdrawal_request_screen.dart';
@@ -107,6 +110,21 @@ GoRouter buildRouter(AuthState authState) {
         path: '/jobs/:id/report',
         builder: (context, state) =>
             ReportUserScreen(jobId: int.parse(state.pathParameters['id']!)),
+      ),
+      GoRoute(
+        path: '/jobs/:id/review',
+        builder: (context, state) => SubmitReviewScreen(
+          jobId: int.parse(state.pathParameters['id']!),
+          counterpartName: state.extra as String? ?? 'the other party',
+        ),
+      ),
+      GoRoute(
+        path: '/reviews/mine',
+        builder: (context, state) => const MyReviewsScreen(),
+      ),
+      GoRoute(
+        path: '/reviews/received',
+        builder: (context, state) => const ReviewsReceivedScreen(),
       ),
       GoRoute(
         path: '/conversations/:jobId',

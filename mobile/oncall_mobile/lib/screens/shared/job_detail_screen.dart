@@ -5,11 +5,14 @@ import 'package:provider/provider.dart';
 import '../../core/api_exception.dart';
 import '../../core/formatters.dart';
 import '../../data/job_repository.dart';
+import '../../data/review_repository.dart';
 import '../../models/job.dart';
+import '../../models/review_eligibility.dart';
 import '../../state/auth_state.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/common.dart';
+import '../../widgets/verified_service_badge.dart';
 
 const _disputeCategories = [
   ('SERVICE_NOT_AS_AGREED', 'Service not as agreed'),
@@ -31,16 +34,24 @@ class JobDetailScreen extends StatefulWidget {
 
 class _JobDetailScreenState extends State<JobDetailScreen> {
   late Future<Job> _load;
+  late Future<ReviewEligibility> _eligibility;
   bool _acting = false;
 
   @override
   void initState() {
     super.initState();
     _load = context.read<JobRepository>().show(widget.jobId);
+    _eligibility = context.read<ReviewRepository>().fetchEligibility(
+      widget.jobId,
+    );
   }
 
-  void _refresh() =>
-      setState(() => _load = context.read<JobRepository>().show(widget.jobId));
+  void _refresh() => setState(() {
+    _load = context.read<JobRepository>().show(widget.jobId);
+    _eligibility = context.read<ReviewRepository>().fetchEligibility(
+      widget.jobId,
+    );
+  });
 
   Future<void> _run(Future<void> Function() action) async {
     setState(() => _acting = true);
@@ -116,36 +127,100 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     });
   }
 
-  Future<void> _submitReview() async {
-    var rating = 5;
-    final commentController = TextEditingController();
+  Future<void> _openSubmitReview(String counterpartName) async {
+    final submitted = await context.push<bool>(
+      '/jobs/${widget.jobId}/review',
+      extra: counterpartName,
+    );
+    if (submitted == true) {
+      _refresh();
+    }
+  }
+
+  Future<void> _withdrawReview(int reviewId) => _run(
+    () => context.read<ReviewRepository>().withdraw(reviewId),
+  );
+
+  Future<void> _respondToReview(int reviewId) async {
+    final controller = TextEditingController();
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Respond to this review'),
+        content: TextField(
+          controller: controller,
+          maxLength: 1000,
+          maxLines: 3,
+          decoration: const InputDecoration(hintText: 'Write a public response…'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Post'),
+          ),
+        ],
+      ),
+    );
+    if (result != true || controller.text.trim().isEmpty) {
+      return;
+    }
+
+    await _run(
+      () => context.read<ReviewRepository>().respond(
+        reviewId,
+        controller.text.trim(),
+      ),
+    );
+  }
+
+  Future<void> _reportReview(int reviewId) async {
+    var category = 'OTHER';
+    final descriptionController = TextEditingController();
     final result = await showDialog<bool>(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          title: const Text('Leave a review'),
+          title: const Text('Report this review'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  for (var star = 1; star <= 5; star++)
-                    IconButton(
-                      icon: Icon(
-                        star <= rating ? Icons.star : Icons.star_border,
-                        color: AppColors.gold500,
-                      ),
-                      onPressed: () => setDialogState(() => rating = star),
-                    ),
+              DropdownButtonFormField<String>(
+                initialValue: category,
+                items: const [
+                  DropdownMenuItem(value: 'HARASSMENT', child: Text('Harassment')),
+                  DropdownMenuItem(value: 'SPAM', child: Text('Spam')),
+                  DropdownMenuItem(
+                    value: 'PERSONAL_INFORMATION',
+                    child: Text('Personal information'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'FALSE_OR_MISLEADING',
+                    child: Text('False or misleading'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'OFFENSIVE_CONTENT',
+                    child: Text('Offensive content'),
+                  ),
+                  DropdownMenuItem(value: 'THREAT', child: Text('Threat')),
+                  DropdownMenuItem(
+                    value: 'UNRELATED_CONTENT',
+                    child: Text('Unrelated content'),
+                  ),
+                  DropdownMenuItem(value: 'OTHER', child: Text('Other')),
                 ],
+                onChanged: (value) =>
+                    setDialogState(() => category = value ?? category),
               ),
               TextField(
-                controller: commentController,
+                controller: descriptionController,
                 decoration: const InputDecoration(
-                  labelText: 'Comment (optional)',
+                  labelText: 'Details (optional)',
                 ),
-                maxLines: 3,
+                maxLines: 2,
               ),
             ],
           ),
@@ -162,17 +237,29 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
         ),
       ),
     );
-    if (result != true) {
+    if (result != true || !mounted) {
       return;
     }
 
-    await _run(() async {
-      await context.read<JobRepository>().submitReview(
-        widget.jobId,
-        rating: rating,
-        comment: commentController.text.trim(),
+    setState(() => _acting = true);
+    try {
+      await context.read<ReviewRepository>().report(
+        reviewId,
+        category: category,
+        description: descriptionController.text.trim(),
       );
-    });
+      if (mounted) {
+        showSuccessSnackBar(context, 'Thanks — we received your report.');
+      }
+    } on ApiException catch (error) {
+      if (mounted) {
+        showErrorSnackBar(context, error.message);
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _acting = false);
+      }
+    }
   }
 
   Future<void> _openDispute() async {
@@ -258,9 +345,6 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
           final job = snapshot.data!;
           final myId = me?.id;
           final iAmFinder = myId != null && myId == job.serviceFinder?.id;
-          final alreadyReviewed = job.reviews.any(
-            (r) => r.reviewer?.id == myId,
-          );
 
           return RefreshIndicator(
             onRefresh: () async => _refresh(),
@@ -353,15 +437,125 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                   label: Text('Messages (${job.messages.length})'),
                 ),
 
-                if (job.status == 'COMPLETED' &&
-                    !alreadyReviewed &&
-                    !_acting) ...[
-                  const SizedBox(height: 12),
-                  OutlinedButton.icon(
-                    onPressed: _submitReview,
-                    icon: const Icon(Icons.star_border),
-                    label: const Text('Leave a review'),
+                if (job.status == 'COMPLETED' && !_acting)
+                  FutureBuilder<ReviewEligibility>(
+                    future: _eligibility,
+                    builder: (context, eligibilitySnapshot) {
+                      final eligibility = eligibilitySnapshot.data;
+                      if (eligibility == null || !eligibility.canReview) {
+                        return const SizedBox.shrink();
+                      }
+
+                      return Padding(
+                        padding: const EdgeInsets.only(top: 12),
+                        child: OutlinedButton.icon(
+                          onPressed: () => _openSubmitReview(
+                            iAmFinder
+                                ? job.provider?.name ?? 'the provider'
+                                : job.serviceFinder?.name ?? 'the customer',
+                          ),
+                          icon: const Icon(Icons.star_border),
+                          label: const Text('Leave a review'),
+                        ),
+                      );
+                    },
                   ),
+
+                if (job.reviews.any((r) => r.isPublished)) ...[
+                  const SizedBox(height: 16),
+                  Text(
+                    'Reviews',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  for (final review in job.reviews.where((r) => r.isPublished))
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: AppCard(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  '${review.reviewer?.name ?? '—'} reviewed ${review.reviewee?.name ?? '—'}',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                              Row(
+                                children: [
+                                  for (var star = 1; star <= 5; star++)
+                                    Icon(
+                                      star <= review.rating
+                                          ? Icons.star
+                                          : Icons.star_border,
+                                      size: 14,
+                                      color: AppColors.gold500,
+                                    ),
+                                ],
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          const VerifiedServiceBadge(),
+                          if (review.comment != null) ...[
+                            const SizedBox(height: 6),
+                            Text(review.comment!),
+                          ],
+                          if (review.hasResponse) ...[
+                            const SizedBox(height: 6),
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: AppColors.surfaceMuted,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'Response from provider',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(review.response!.body),
+                                ],
+                              ),
+                            ),
+                          ] else if (!_acting &&
+                              me?.id == review.reviewee?.id) ...[
+                            const SizedBox(height: 6),
+                            TextButton(
+                              onPressed: () => _respondToReview(review.id),
+                              child: const Text('Respond'),
+                            ),
+                          ],
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              if (!_acting && me?.id == review.reviewer?.id)
+                                TextButton(
+                                  onPressed: () => _withdrawReview(review.id),
+                                  child: const Text('Withdraw'),
+                                )
+                              else if (!_acting)
+                                TextButton(
+                                  onPressed: () => _reportReview(review.id),
+                                  child: const Text('Report'),
+                                ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      ),
+                    ),
                 ],
 
                 const SizedBox(height: 16),

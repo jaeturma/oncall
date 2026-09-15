@@ -273,6 +273,29 @@ class ProviderSearchTest extends TestCase
         $response->assertRedirect(route('home'))->assertSessionHasErrors('latitude');
     }
 
+    public function test_rating_sort_uses_the_bayesian_reputation_score_not_the_raw_average(): void
+    {
+        $province = Province::factory()->create();
+        $municipality = Municipality::factory()->for($province)->create();
+        $service = Service::factory()->create();
+        // A single 5-star review vs. many consistently-strong reviews — the
+        // raw average alone would rank the single review first, but
+        // reputation_score (Phase P §32/§33) should rank the volume
+        // provider first for the "rating" sort, without ever changing the
+        // honest displayed rating_cached (asserted separately in
+        // ProviderReputationServiceTest).
+        $oneReview = User::factory()->serviceProvider()->create(['name' => 'One Review Provider']);
+        $manyReviews = User::factory()->serviceProvider()->create(['name' => 'Many Reviews Provider']);
+        $this->searchableProfile($oneReview, $province, $municipality, $service, ['rating_cached' => 5.0, 'reputation_score' => 4.083]);
+        $this->searchableProfile($manyReviews, $province, $municipality, $service, ['rating_cached' => 4.8, 'reputation_score' => 4.756]);
+        $viewer = User::factory()->identityVerified()->create(['role' => UserRole::ServiceFinder]);
+        ProviderDocument::factory()->for($viewer)->create(['status' => VerificationStatus::Verified, 'expires_at' => now()->addYear()]);
+
+        $response = $this->actingAs($viewer)->get(route('providers.search', ['help' => 'service:'.$service->id, 'province_id' => $province->id, 'sort' => 'rating']));
+
+        $response->assertOk()->assertSeeInOrder([$manyReviews->name, $oneReview->name]);
+    }
+
     private function searchableProfile(User $provider, Province $province, Municipality $municipality, Service $service, array $attributes = [], ?DateTimeInterface $expiresAt = null): ProviderProfile
     {
         $provider->update(['identity_verification_status' => VerificationStatus::Verified]);

@@ -132,6 +132,16 @@ class _ProviderHomeScreenState extends State<ProviderHomeScreen> {
                     ),
                   ],
                 ),
+                const SizedBox(height: 12),
+                StatCard(
+                  label: 'Reviews',
+                  value: profile.reputation?.ratingCount == 0
+                      ? 'No reviews yet'
+                      : '${profile.reputation?.averageRating?.toStringAsFixed(1) ?? '—'} ★ (${profile.reputation?.ratingCount ?? 0})',
+                  icon: Icons.star_border,
+                  tone: StatCardTone.neutral,
+                  onTap: () => context.push('/reviews/received'),
+                ),
                 const SizedBox(height: 16),
                 AppCard(
                   child: Column(

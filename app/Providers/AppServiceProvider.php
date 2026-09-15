@@ -11,6 +11,7 @@ use App\Models\Job;
 use App\Models\JobMessage;
 use App\Models\JobPayment;
 use App\Models\Review;
+use App\Models\ReviewReport;
 use App\Models\ServiceRequest;
 use App\Models\User;
 use App\Models\UserReport;
@@ -23,6 +24,7 @@ use App\Policies\JobMessagePolicy;
 use App\Policies\JobPaymentPolicy;
 use App\Policies\JobPolicy;
 use App\Policies\ReviewPolicy;
+use App\Policies\ReviewReportPolicy;
 use App\Policies\ServiceRequestPolicy;
 use App\Policies\UserReportPolicy;
 use App\Policies\WithdrawalPolicy;
@@ -58,6 +60,7 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(UserReport::class, UserReportPolicy::class);
         Gate::policy(EnforcementCase::class, EnforcementCasePolicy::class);
         Gate::policy(Review::class, ReviewPolicy::class);
+        Gate::policy(ReviewReport::class, ReviewReportPolicy::class);
         Gate::policy(AccountType::class, AccountTypePolicy::class);
         Gate::policy(Commission::class, CommissionPolicy::class);
         Gate::policy(Withdrawal::class, WithdrawalPolicy::class);
@@ -99,6 +102,14 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('manage-location-settings', fn (User $user): bool => $user->canAccessAdmin());
         Gate::define('manage-map-settings', fn (User $user): bool => $user->canAccessAdmin());
         Gate::define('view-location-diagnostics', fn (User $user): bool => $user->canAccessAdmin());
+
+        // Phase P: review/reputation administration. Same Admin-only
+        // collapse as every prior phase's settings/moderation gates — ADR-001
+        // has no separate Enforcement/Compliance sub-role to grant these to
+        // instead, and Accounting/Budget/Cashier never pass canAccessAdmin().
+        Gate::define('manage-review-settings', fn (User $user): bool => $user->canAccessAdmin());
+        Gate::define('moderate-reviews', fn (User $user): bool => $user->canAccessAdmin());
+        Gate::define('view-review-reports', fn (User $user): bool => $user->canAccessAdmin());
 
         // Laravel's slim skeleton has no EventServiceProvider to auto-wire
         // this, so it's registered explicitly: User implements

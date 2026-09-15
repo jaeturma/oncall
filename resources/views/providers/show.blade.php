@@ -33,7 +33,7 @@
                         <span>Serving {{ $profile->municipality->name }}, {{ $profile->province->name }}@if($profile->service_radius_km) &middot; up to {{ $profile->service_radius_km }} km @endif</span>
                     </p>
                     <div class="mt-3 flex flex-wrap items-center gap-x-5 gap-y-1.5">
-                        <x-ui.rating :value="$profile->rating_cached" :count="$reviewsCount" size="md" />
+                        <x-ui.rating :value="$reputation['average_rating']" :count="$reputation['rating_count']" size="md" />
                         <span class="text-sm text-ink-secondary"><span class="font-semibold text-ink tabular-nums">{{ $profile->completed_jobs_cached }}</span> completed {{ str('service')->plural($profile->completed_jobs_cached) }}</span>
                     </div>
                     <ul class="mt-4 flex flex-wrap gap-2" aria-label="Verifications">
@@ -111,9 +111,30 @@
             <section class="card card-pad">
                 <div class="flex flex-wrap items-center justify-between gap-3">
                     <h2 class="h3">Reviews</h2>
-                    <x-ui.rating :value="$profile->rating_cached" :count="$reviewsCount" />
+                    <x-ui.rating :value="$reputation['average_rating']" :count="$reputation['rating_count']" />
                 </div>
+
+                @if($reputation['rating_count'] > 0)
+                    <div class="mt-4 grid gap-1.5">
+                        @for($star = 5; $star >= 1; $star--)
+                            <div class="flex items-center gap-2 text-xs text-ink-muted">
+                                <span class="w-8 shrink-0 tabular-nums">{{ $star }} ★</span>
+                                <div class="h-1.5 flex-1 overflow-hidden rounded-full bg-surface-muted">
+                                    <div class="h-full rounded-full bg-gold-400" style="width: {{ $reputation['rating_distribution'][(string) $star] }}%"></div>
+                                </div>
+                                <span class="w-10 shrink-0 text-right tabular-nums">{{ $reputation['rating_distribution'][(string) $star] }}%</span>
+                            </div>
+                        @endfor
+                    </div>
+                @endif
+
                 @if($reviews->isNotEmpty())
+                    <div class="mt-5 flex flex-wrap items-center gap-2 border-t border-line pt-4">
+                        <span class="text-xs font-medium text-ink-muted">Sort by</span>
+                        @foreach(['newest' => 'Newest', 'highest' => 'Highest rating', 'lowest' => 'Lowest rating'] as $value => $label)
+                            <a href="{{ request()->fullUrlWithQuery(['sort' => $value, 'page' => null]) }}" class="badge {{ $reviewSort === $value ? 'badge-brand' : 'badge-outline' }}">{{ $label }}</a>
+                        @endforeach
+                    </div>
                     <ul class="mt-4 grid gap-4">
                         @foreach($reviews as $review)
                             <li class="rounded-xl border border-line p-4">
@@ -121,19 +142,58 @@
                                     <div class="flex items-center gap-2">
                                         <x-ui.avatar :name="$review->reviewer->name" size="xs" />
                                         <p class="text-sm font-semibold text-ink">{{ str($review->reviewer->name)->before(' ') }}</p>
+                                        <x-ui.badge tone="success" icon="check-badge">Verified Service</x-ui.badge>
                                     </div>
                                     <p class="flex items-center gap-2 text-xs text-ink-muted">
                                         <span class="text-gold-500" aria-label="{{ $review->rating }} out of 5 stars">{{ str_repeat('★', $review->rating) }}<span class="text-slate-300">{{ str_repeat('★', 5 - $review->rating) }}</span></span>
                                         {{ $review->created_at->format('M Y') }}
                                     </p>
                                 </div>
-                                <p class="mt-2 whitespace-pre-line text-sm text-ink-secondary">{{ $review->comment }}</p>
+                                @if($review->comment)<p class="mt-2 whitespace-pre-line text-sm text-ink-secondary">{{ $review->comment }}</p>@endif
+
+                                @if($review->hasResponse())
+                                    <div class="mt-3 rounded-lg bg-surface-muted p-3">
+                                        <p class="text-xs font-semibold text-ink">Response from provider</p>
+                                        <p class="mt-1 whitespace-pre-line text-sm text-ink-secondary">{{ $review->response }}</p>
+                                    </div>
+                                @elseif(auth()->id() === $review->reviewee_id)
+                                    <form class="mt-3 grid gap-2" method="POST" action="{{ route('reviews.response.store', $review) }}">
+                                        @csrf
+                                        <label class="sr-only" for="response-{{ $review->id }}">Respond to this review</label>
+                                        <textarea class="textarea text-sm" id="response-{{ $review->id }}" name="response" rows="2" maxlength="1000" placeholder="Write a public response…" required></textarea>
+                                        <div><x-ui.button variant="secondary" size="sm">Post response</x-ui.button></div>
+                                    </form>
+                                @endif
+
+                                <div class="mt-3 flex flex-wrap gap-3 text-xs">
+                                    @if(auth()->id() === $review->reviewer_id)
+                                        <form method="POST" action="{{ route('reviews.withdraw', $review) }}" onsubmit="return confirm('Withdraw this review? It will no longer be public.');">
+                                            @csrf @method('PATCH')
+                                            <button type="submit" class="font-medium text-ink-muted hover:text-danger-600">Withdraw</button>
+                                        </form>
+                                    @elseif(auth()->check())
+                                        <details class="relative">
+                                            <summary class="cursor-pointer font-medium text-ink-muted hover:text-danger-600">Report</summary>
+                                            <form class="absolute z-10 mt-2 grid w-56 gap-2 rounded-xl border border-line bg-surface p-3 shadow-pop" method="POST" action="{{ route('reviews.reports.store', $review) }}">
+                                                @csrf
+                                                <select class="select select-sm" name="category" required>
+                                                    @foreach(App\Enums\ReviewReportCategory::cases() as $category)
+                                                        <option value="{{ $category->value }}">{{ str($category->value)->replace('_', ' ')->title() }}</option>
+                                                    @endforeach
+                                                </select>
+                                                <textarea class="textarea text-xs" name="description" rows="2" maxlength="1000" placeholder="Details (optional)"></textarea>
+                                                <x-ui.button variant="secondary" size="sm">Submit report</x-ui.button>
+                                            </form>
+                                        </details>
+                                    @endif
+                                </div>
                             </li>
                         @endforeach
                     </ul>
+                    @if($reviews->hasPages())<div class="mt-4">{{ $reviews->links() }}</div>@endif
                     <p class="mt-3 text-xs text-ink-muted">Reviews can only be written by customers who completed a booking with this provider on Oncall.</p>
                 @else
-                    <p class="mt-3 text-sm text-ink-secondary">No written reviews yet. Reviews come only from completed bookings on Oncall.</p>
+                    <p class="mt-3 text-sm text-ink-secondary">No reviews yet. Reviews come only from completed bookings on Oncall.</p>
                 @endif
             </section>
 

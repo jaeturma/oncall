@@ -13,7 +13,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['user_id', 'province_id', 'municipality_id', 'barangay_id', 'bio', 'available_now', 'availability_status', 'service_radius_km', 'verification_status', 'credentials_metadata', 'rating_cached', 'completed_jobs_cached', 'latitude', 'longitude', 'location_source', 'location_updated_at'])]
+#[Fillable(['user_id', 'province_id', 'municipality_id', 'barangay_id', 'bio', 'available_now', 'availability_status', 'service_radius_km', 'verification_status', 'credentials_metadata', 'rating_cached', 'completed_jobs_cached', 'latitude', 'longitude', 'location_source', 'location_updated_at', 'reputation_score', 'reviews_count'])]
 class ProviderProfile extends Model
 {
     /** @use HasFactory<ProviderProfileFactory> */
@@ -27,6 +27,7 @@ class ProviderProfile extends Model
             'credentials_metadata' => 'array',
             'verification_status' => VerificationStatus::class,
             'rating_cached' => 'decimal:2',
+            'reputation_score' => 'decimal:3',
             'latitude' => 'decimal:6',
             'longitude' => 'decimal:6',
             'location_source' => LocationSource::class,

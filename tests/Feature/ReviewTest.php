@@ -6,6 +6,7 @@ use App\Enums\JobStatus;
 use App\Enums\UserRole;
 use App\Models\Job;
 use App\Models\ProviderProfile;
+use App\Models\Review;
 use App\Models\ServiceRequest;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -71,6 +72,52 @@ class ReviewTest extends TestCase
         $this->actingAs($finder)->post(route('jobs.reviews.store', $job), ['rating' => 6, 'comment' => str_repeat('a', 2001)])->assertSessionHasErrors(['rating', 'comment']);
 
         $this->assertDatabaseCount('reviews', 0);
+    }
+
+    public function test_rating_boundary_values_are_rejected(): void
+    {
+        [$finder, , $job] = $this->participantsAndJob(JobStatus::Completed);
+
+        foreach ([0, 6, -1] as $invalidRating) {
+            $this->actingAs($finder)->post(route('jobs.reviews.store', $job), ['rating' => $invalidRating])->assertSessionHasErrors('rating');
+        }
+        $this->actingAs($finder)->post(route('jobs.reviews.store', $job), ['rating' => '4.7'])->assertSessionHasErrors('rating');
+
+        $this->assertDatabaseCount('reviews', 0);
+    }
+
+    public function test_reviewer_can_withdraw_their_own_review_and_aggregate_recalculates(): void
+    {
+        [$finder, $provider, $job] = $this->participantsAndJob(JobStatus::Completed);
+        $profile = ProviderProfile::factory()->create(['user_id' => $provider->id, 'rating_cached' => null]);
+        $this->actingAs($finder)->post(route('jobs.reviews.store', $job), ['rating' => 5]);
+        $review = Review::query()->where('job_id', $job->id)->firstOrFail();
+
+        $this->actingAs($finder)->patch(route('reviews.withdraw', $review))->assertRedirect();
+
+        $this->assertDatabaseHas('reviews', ['id' => $review->id, 'status' => 'WITHDRAWN']);
+        $this->assertNull($profile->fresh()->rating_cached);
+    }
+
+    public function test_only_the_reviewer_can_withdraw_a_review(): void
+    {
+        [$finder, $provider, $job] = $this->participantsAndJob(JobStatus::Completed);
+        $this->actingAs($finder)->post(route('jobs.reviews.store', $job), ['rating' => 5]);
+        $review = Review::query()->where('job_id', $job->id)->firstOrFail();
+
+        $this->actingAs($provider)->patch(route('reviews.withdraw', $review))->assertForbidden();
+
+        $this->assertDatabaseHas('reviews', ['id' => $review->id, 'status' => 'PUBLISHED']);
+    }
+
+    public function test_withdrawn_review_cannot_be_withdrawn_again(): void
+    {
+        [$finder, , $job] = $this->participantsAndJob(JobStatus::Completed);
+        $this->actingAs($finder)->post(route('jobs.reviews.store', $job), ['rating' => 5]);
+        $review = Review::query()->where('job_id', $job->id)->firstOrFail();
+        $this->actingAs($finder)->patch(route('reviews.withdraw', $review));
+
+        $this->actingAs($finder)->patch(route('reviews.withdraw', $review))->assertForbidden();
     }
 
     public function test_review_comment_is_escaped_on_job_screen(): void

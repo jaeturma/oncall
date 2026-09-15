@@ -1,4 +1,5 @@
 import '../core/json.dart';
+import 'review.dart';
 
 class JobPayment {
   JobPayment({
@@ -120,33 +121,6 @@ class JobMessage {
   final DateTime? createdAt;
 }
 
-class JobReview {
-  JobReview({
-    required this.id,
-    required this.rating,
-    this.comment,
-    this.reviewer,
-    this.reviewee,
-    this.createdAt,
-  });
-
-  factory JobReview.fromJson(Map<String, dynamic> json) => JobReview(
-    id: json['id'] as int,
-    rating: json['rating'] as int,
-    comment: json['comment'] as String?,
-    reviewer: IdName.fromJsonOrNull(json['reviewer']),
-    reviewee: IdName.fromJsonOrNull(json['reviewee']),
-    createdAt: parseDate(json['created_at']),
-  );
-
-  final int id;
-  final int rating;
-  final String? comment;
-  final IdName? reviewer;
-  final IdName? reviewee;
-  final DateTime? createdAt;
-}
-
 class Job {
   Job({
     required this.id,
@@ -200,7 +174,7 @@ class Job {
         .map((e) => JobMessage.fromJson(e as Map<String, dynamic>))
         .toList(),
     reviews: (json['reviews'] as List<dynamic>? ?? [])
-        .map((e) => JobReview.fromJson(e as Map<String, dynamic>))
+        .map((e) => Review.fromJson(e as Map<String, dynamic>))
         .toList(),
   );
 
@@ -222,7 +196,7 @@ class Job {
   final JobDispute? dispute;
   final List<JobStatusLogEntry> statusLogs;
   final List<JobMessage> messages;
-  final List<JobReview> reviews;
+  final List<Review> reviews;
 
   bool get isActive => !['COMPLETED', 'CANCELLED'].contains(status);
 }

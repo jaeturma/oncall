@@ -19,6 +19,9 @@
     if ($user->can('viewAny', App\Models\Job::class)) {
         $items[] = ['label' => 'Bookings & jobs', 'href' => route('jobs.index'), 'icon' => 'briefcase', 'active' => request()->routeIs('jobs.*')];
         $items[] = ['label' => 'Messages', 'href' => route('messages.index'), 'icon' => 'chat', 'active' => request()->routeIs('messages.*'), 'count' => $user->unreadJobMessagesCount()];
+        $items[] = $role === UserRole::ServiceProvider
+            ? ['label' => 'Reviews received', 'href' => route('reviews.received'), 'icon' => 'star', 'active' => request()->routeIs('reviews.received')]
+            : ['label' => 'My reviews', 'href' => route('reviews.mine'), 'icon' => 'star', 'active' => request()->routeIs('reviews.mine')];
     }
     $items[] = ['label' => 'Notifications', 'href' => route('notifications.index'), 'icon' => 'bell', 'active' => request()->routeIs('notifications.*'), 'count' => $unread];
 

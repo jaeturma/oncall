@@ -127,6 +127,22 @@ return [
             'default_title' => 'Dispute resolved: {{status}}',
             'default_body' => '{{resolution}}',
         ],
+        'review_received' => [
+            'category' => NotificationCategory::ServiceUpdates,
+            'mandatory' => false,
+            'sms_fallback' => false,
+            'placeholders' => ['reviewer_name', 'rating'],
+            'default_title' => 'You received a new review',
+            'default_body' => '{{reviewer_name}} left a {{rating}}-star review.',
+        ],
+        'review_response_received' => [
+            'category' => NotificationCategory::ServiceUpdates,
+            'mandatory' => false,
+            'sms_fallback' => false,
+            'placeholders' => ['provider_name'],
+            'default_title' => 'The provider responded to your review',
+            'default_body' => '{{provider_name}} posted a response to your review.',
+        ],
         'new_message' => [
             'category' => NotificationCategory::Messaging,
             'mandatory' => false,

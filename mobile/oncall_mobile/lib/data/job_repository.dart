@@ -48,22 +48,6 @@ class JobRepository {
     return JobMessage.fromJson(json['data'] as Map<String, dynamic>);
   }
 
-  Future<JobReview> submitReview(
-    int jobId, {
-    required int rating,
-    String? comment,
-  }) async {
-    final json = await _client.post(
-      '/jobs/$jobId/reviews',
-      data: {
-        'rating': rating,
-        if (comment != null && comment.isNotEmpty) 'comment': comment,
-      },
-    );
-
-    return JobReview.fromJson(json['data'] as Map<String, dynamic>);
-  }
-
   /// Incident reporting on a job's counterparty (safety domain).
   Future<void> reportUser(
     int jobId, {

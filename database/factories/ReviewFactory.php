@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\ReviewStatus;
 use App\Models\Job;
 use App\Models\Review;
 use App\Models\User;
@@ -25,6 +26,22 @@ class ReviewFactory extends Factory
             'reviewee_id' => User::factory(),
             'rating' => fake()->numberBetween(1, 5),
             'comment' => fake()->sentence(),
+            'status' => ReviewStatus::Published,
         ];
+    }
+
+    public function hidden(): static
+    {
+        return $this->state(['status' => ReviewStatus::Hidden]);
+    }
+
+    public function removed(): static
+    {
+        return $this->state(['status' => ReviewStatus::Removed]);
+    }
+
+    public function withdrawn(): static
+    {
+        return $this->state(['status' => ReviewStatus::Withdrawn]);
     }
 }

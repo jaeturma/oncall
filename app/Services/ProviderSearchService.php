@@ -30,7 +30,7 @@ class ProviderSearchService
         [$originLatitude, $originLongitude] = $this->originCoordinates($filters);
 
         $profiles = ProviderProfile::query()
-            ->select(['id', 'user_id', 'province_id', 'municipality_id', 'barangay_id', 'available_now', 'availability_status', 'verification_status', 'rating_cached', 'completed_jobs_cached', 'latitude', 'longitude', 'service_radius_km'])
+            ->select(['id', 'user_id', 'province_id', 'municipality_id', 'barangay_id', 'available_now', 'availability_status', 'verification_status', 'rating_cached', 'reputation_score', 'reviews_count', 'completed_jobs_cached', 'latitude', 'longitude', 'service_radius_km'])
             ->with([
                 'province:id,name',
                 'municipality:id,province_id,name,latitude,longitude',
@@ -123,7 +123,13 @@ class ProviderSearchService
     {
         $availability = fn (ProviderProfile $a, ProviderProfile $b): int => $a->availability_status->rank() <=> $b->availability_status->rank();
         $distance = fn (ProviderProfile $a, ProviderProfile $b): int => ($a->distance_km ?? PHP_FLOAT_MAX) <=> ($b->distance_km ?? PHP_FLOAT_MAX);
-        $rating = fn (ProviderProfile $a, ProviderProfile $b): int => $b->rating_cached <=> $a->rating_cached;
+        // Bayesian-adjusted score for ranking only (Phase P §32/§33) — a
+        // provider with a single 5-star review must not automatically
+        // outrank one with hundreds of consistently strong reviews. Falls
+        // back to the raw average for a provider with no reputation_score
+        // yet (zero reviews). The public-facing `rating`/`rating_cached`
+        // field is never touched by this — see ProviderReputationService.
+        $rating = fn (ProviderProfile $a, ProviderProfile $b): int => ($b->reputation_score ?? $b->rating_cached ?? 0) <=> ($a->reputation_score ?? $a->rating_cached ?? 0);
         $completed = fn (ProviderProfile $a, ProviderProfile $b): int => $b->completed_jobs_cached <=> $a->completed_jobs_cached;
         $id = fn (ProviderProfile $a, ProviderProfile $b): int => $a->id <=> $b->id;
 

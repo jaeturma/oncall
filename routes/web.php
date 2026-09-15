@@ -18,6 +18,9 @@ use App\Http\Controllers\Admin\ProviderController as AdminProviderController;
 use App\Http\Controllers\Admin\ReportController as AdminReportController;
 use App\Http\Controllers\Admin\ResolvedEnforcementCaseController;
 use App\Http\Controllers\Admin\ReviewedEnforcementAppealController;
+use App\Http\Controllers\Admin\ReviewModerationController;
+use App\Http\Controllers\Admin\ReviewReportController as AdminReviewReportController;
+use App\Http\Controllers\Admin\ReviewSettingController;
 use App\Http\Controllers\Admin\ServiceCatalogController;
 use App\Http\Controllers\Admin\SmsLogController;
 use App\Http\Controllers\Admin\SmsSettingController;
@@ -50,6 +53,9 @@ use App\Http\Controllers\Provider\ProfileController;
 use App\Http\Controllers\ProviderController;
 use App\Http\Controllers\ProviderSearchController;
 use App\Http\Controllers\ReviewController;
+use App\Http\Controllers\ReviewHistoryController;
+use App\Http\Controllers\ReviewReportController;
+use App\Http\Controllers\ReviewResponseController;
 use App\Http\Controllers\ServiceRequestController;
 use App\Http\Controllers\SponsorController;
 use App\Http\Controllers\Staff\JobPaymentReleaseController;
@@ -108,6 +114,11 @@ Route::middleware(['auth', 'account.active'])->group(function () {
     Route::post('/jobs/{job}/messages', [JobMessageController::class, 'store'])->middleware('throttle:20,1')->name('jobs.messages.store');
     Route::post('/jobs/{job}/reports', [UserReportController::class, 'store'])->middleware('throttle:5,1')->name('jobs.reports.store');
     Route::post('/jobs/{job}/reviews', [ReviewController::class, 'store'])->middleware('throttle:5,1')->name('jobs.reviews.store');
+    Route::patch('/reviews/{review}/withdraw', [ReviewController::class, 'withdraw'])->name('reviews.withdraw');
+    Route::post('/reviews/{review}/response', ReviewResponseController::class)->middleware('throttle:10,1')->name('reviews.response.store');
+    Route::post('/reviews/{review}/reports', ReviewReportController::class)->middleware('throttle:10,1')->name('reviews.reports.store');
+    Route::get('/reviews/mine', [ReviewHistoryController::class, 'written'])->name('reviews.mine');
+    Route::get('/reviews/received', [ReviewHistoryController::class, 'received'])->name('reviews.received');
     Route::post('/jobs/{job}/disputes', [DisputeController::class, 'store'])->middleware('throttle:5,1')->name('disputes.store');
     Route::patch('/disputes/{dispute}/withdraw', [DisputeController::class, 'withdraw'])->name('disputes.withdraw');
     Route::patch('/job-payments/{job_payment}/confirm', [JobPaymentController::class, 'confirm'])->middleware('throttle:10,1')->name('job-payments.confirm');
@@ -173,6 +184,15 @@ Route::middleware(['auth', 'account.active'])->group(function () {
         Route::get('/settings/location', [LocationSettingController::class, 'edit'])->name('settings.location.edit');
         Route::patch('/settings/location', [LocationSettingController::class, 'update'])->name('settings.location.update');
         Route::get('/location-diagnostics', [LocationDiagnosticsController::class, 'index'])->name('location-diagnostics.index');
+
+        // Phase P: review/reputation administration. Web-only by
+        // construction — no equivalent route exists in routes/api.php.
+        Route::get('/settings/reviews', [ReviewSettingController::class, 'edit'])->name('settings.reviews.edit');
+        Route::patch('/settings/reviews', [ReviewSettingController::class, 'update'])->name('settings.reviews.update');
+        Route::get('/review-reports', [AdminReviewReportController::class, 'index'])->name('review-reports.index');
+        Route::get('/review-reports/{review_report}', [AdminReviewReportController::class, 'show'])->name('review-reports.show');
+        Route::patch('/review-reports/{review_report}', [AdminReviewReportController::class, 'update'])->name('review-reports.update');
+        Route::patch('/reviews/{review}/moderate', ReviewModerationController::class)->name('reviews.moderate');
     });
 
     // Commissions and finance reports are the one part of the admin area

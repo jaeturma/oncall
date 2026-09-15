@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\Api\V1;
 
+use App\Services\ProviderReputationService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -34,6 +35,12 @@ class ProviderProfileResource extends JsonResource
             'verification_status' => $this->verification_status->value,
             'rating' => $this->rating_cached,
             'completed_jobs' => $this->completed_jobs_cached,
+            // Phase P: the fuller sanitized reputation payload (distribution,
+            // verified-review count) — see ProviderReputationService::summary().
+            // Never includes moderation data; `average_rating`/`rating_count`
+            // here are the same honest figures as `rating`/reviews above,
+            // just alongside the distribution for a profile/card display.
+            'reputation' => app(ProviderReputationService::class)->summary($this->resource),
             'mobile_verified' => $this->mobile_verified ?? null,
             'email_verified' => $this->email_verified ?? null,
             'verified_document_types' => $this->verified_document_types ?? [],

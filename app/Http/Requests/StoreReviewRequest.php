@@ -4,6 +4,8 @@ namespace App\Http\Requests;
 
 use App\Models\Job;
 use App\Models\Review;
+use App\Models\ReviewSetting;
+use App\Rules\NoDirectContact;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -26,9 +28,12 @@ class StoreReviewRequest extends FormRequest
      */
     public function rules(): array
     {
+        $settings = ReviewSetting::current();
+
         return [
+            // Integer 1-5 already rejects 0, 6, decimals, and negatives.
             'rating' => ['required', 'integer', 'between:1,5'],
-            'comment' => ['nullable', 'string', 'max:2000'],
+            'comment' => [$settings->comment_required ? 'required' : 'nullable', 'string', 'max:'.$settings->max_comment_length, new NoDirectContact],
         ];
     }
 }
